@@ -197,8 +197,7 @@ class RegistrationTest extends TestCase
 
         $this->assertInstanceOf(HasMany::class, $relation);
         $this->assertInstanceOf(Link::class, $relation->getRelated());
-        $this->assertEquals('artist_id', $relation->getForeignKeyName());
-    }
+        $this->assertEquals('registration_id', $relation->getForeignKeyName());
 
 
     // public function testReviewedByRelation(): void
