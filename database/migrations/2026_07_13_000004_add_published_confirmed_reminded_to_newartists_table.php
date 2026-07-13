@@ -38,14 +38,16 @@ return new class extends Migration {
     public function down(): void
     {
         $schema = DB::connection()->getSchemaBuilder();
-        $schema->blueprintResolver(function ($table, $callback) {
-            return new Table($table, $callback);
-        });
+        $schema->blueprintResolver(fn ($table, $callback) => new Table($table, $callback));
 
         $schema->table($this->tableName, function ($table) {
-            foreach ($table->columns as $column) {
-                $table->dropColumn($column->name);
-            }
+            $table->dropColumn(['published_at', 'confirmed_at', 'reminded_at']);
         });
+
+        if ($this->hasAudit) {
+            $schema->table('_' . $this->tableName, function ($table) {
+                $table->dropColumn(['published_at', 'confirmed_at', 'reminded_at']);
+            });
+        }
     }
 };
