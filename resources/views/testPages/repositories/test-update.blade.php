@@ -10,7 +10,7 @@
 <h2>Atualizar Repository</h2>
 
 <form
-    action="{{ route('repositories.test-update') }}"
+    action="{{ route('test-upload.update') }}"
     method="POST"
     enctype="multipart/form-data"
 >
