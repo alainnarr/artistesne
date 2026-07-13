@@ -10,7 +10,7 @@
 <h2>Teste Upload Repository</h2>
 
 <form
-    action="{{ route('repositories.test-upload') }}"
+    action="{{ route('test-upload.store') }}"
     method="POST"
     enctype="multipart/form-data"
 >
