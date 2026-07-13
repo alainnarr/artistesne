@@ -56,7 +56,7 @@ class PreventUpdateTest extends TestCase
         $model = $this->getModel()->create(['name' => 'Original', 'dont_update' => 'initial_value']);
 
         $this->expectException(Exception::class);
-        $this->expectExceptionMessage('It is not allowed to update information in this table: prevent_update_test');
+        $this->expectExceptionMessage('It is not allowed to update information in this table: prevent_update_test - columns: dont_update');
         $model->update(['dont_update' => 'Updated']);
     }
 
