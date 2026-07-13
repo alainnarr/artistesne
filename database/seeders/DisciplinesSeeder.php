@@ -14,7 +14,7 @@ class DisciplinesSeeder extends Seeder
 
         foreach ($disciplines as $discipline) {
             unset($discipline['activities']);
-            Discipline::updateOrCreate(['code' => $discipline['code']], $discipline);
+            Discipline::firstOrCreate(['code' => $discipline['code']], $discipline);
         }
 
         $this->command?->info("Disciplines seeded: ".count($disciplines).' discipline(s).');
