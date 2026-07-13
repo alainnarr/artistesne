@@ -102,8 +102,11 @@ class ArtistTest extends TestCase
     {
         $relation = $this->makeModel()->activities();
 
-        $this->assertInstanceOf(HasMany::class, $relation);
+        $this->assertInstanceOf(BelongsToMany::class, $relation);
         $this->assertInstanceOf(Activity::class, $relation->getRelated());
+        $this->assertEquals('activities_artists', $relation->getTable());
+        $this->assertEquals('artist_id', $relation->getForeignPivotKeyName());
+        $this->assertEquals('activity_id', $relation->getRelatedPivotKeyName());
     }
 
     public function testActivitiesArtistsRelation(): void
