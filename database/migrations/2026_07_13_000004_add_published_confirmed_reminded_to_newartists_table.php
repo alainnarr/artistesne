@@ -1,0 +1,51 @@
+<?php
+
+use App\Database\Schemas\Table;
+use App\Database\Schemas\Audit;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+
+
+return new class extends Migration {
+    private string $tableName = 'newartists';
+    private bool $hasAudit = true;
+
+    private function _columns(&$table)
+    {
+        $table->date('publication_date')->nullable()->after('enum_show_contact');
+        $table->date('confirmed_at')->nullable()->after('publication_date');
+        $table->date('reminded_at')->nullable()->after('confirmed_at');
+    }
+
+    public function up(): void
+    {
+        $schema = DB::connection()->getSchemaBuilder();
+        $schema->blueprintResolver(function ($table, $callback) {
+            return new Table($table, $callback);
+        });
+
+        $schema->table($this->tableName, function ($table) {
+            $this->_columns($table);
+        });
+
+        if ($this->hasAudit) {
+            $schema->table('_' . $this->tableName, function ($table) {
+                $this->_columns($table);
+            });
+        }
+    }
+
+    public function down(): void
+    {
+        $schema = DB::connection()->getSchemaBuilder();
+        $schema->blueprintResolver(function ($table, $callback) {
+            return new Table($table, $callback);
+        });
+
+        $schema->table($this->tableName, function ($table) {
+            foreach ($table->columns as $column) {
+                $table->dropColumn($column->name);
+            }
+        });
+    }
+};

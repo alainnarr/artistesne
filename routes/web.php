@@ -18,6 +18,49 @@ use App\Livewire\Public\RequestModification;
 use Filament\Http\Middleware\Authenticate;
 use Illuminate\Support\Facades\Route;
 
+//TODO : Remove this test route when the repository service is fully integrated into the application.
+use App\Http\Controllers\RepositoryTestController;
+Route::prefix('test-upload')->name('test-upload.')->group(function () {
+    Route::get( '/', [RepositoryTestController::class, 'index'])->name('index');
+    Route::post('/', [RepositoryTestController::class, 'store'])->name('store');
+    Route::get( '/update', [RepositoryTestController::class, 'updateForm'])->name('updateForm');
+    Route::post('/update', [RepositoryTestController::class, 'update'])->name('update');
+});
+
+//TODO : Remove this test route when the links service is fully integrated into the application.
+use App\Http\Controllers\LinksTestController;
+Route::prefix('test-links')->name('test-links.')->group(function () {
+    Route::get(   '/', [LinksTestController::class, 'index'])->name('index');
+    Route::post(  '/', [LinksTestController::class, 'store'])->name('store');
+    Route::put(   '/', [LinksTestController::class, 'update'])->name('update');
+    Route::delete('/', [LinksTestController::class, 'destroy'])->name('delete');
+});
+
+//TODO : Remove this test route when the registrations service is fully integrated into the application.
+use App\Http\Controllers\RegistrationsTestController;
+Route::prefix('test-registration')->name('test-registration.')->group(function () {
+    Route::get( '/', [RegistrationsTestController::class, 'index'])->name('index');
+    Route::post('/', [RegistrationsTestController::class, 'store'])->name('store');
+    Route::post('/{registration}/status', [RegistrationsTestController::class, 'changeStatus'])->name('status');
+});
+
+//TODO : Remove this test route when the synonyms service is fully integrated into the application.
+use App\Http\Controllers\SynonymsTestController;
+Route::prefix('test-synonyms')->name('test-synonyms.')->group(function () {
+    Route::get(   '/', [SynonymsTestController::class, 'index'])->name('index');
+    Route::post(  '/', [SynonymsTestController::class, 'store'])->name('store');
+    Route::put(   '/', [SynonymsTestController::class, 'update'])->name('update');
+    Route::delete('/', [SynonymsTestController::class, 'destroy'])->name('delete');
+});
+
+// TODO : Remove this test route when the keywords service is fully integrated into the application.
+use App\Http\Controllers\KeywordsTestController;
+Route::prefix('test-keywords')->name('test-keywords.')->group(function () {
+    Route::get('/', [KeywordsTestController::class, 'index'])->name('index');
+    Route::post('/attach', [KeywordsTestController::class, 'attach'])->name('attach');
+    Route::post('/detach', [KeywordsTestController::class, 'detach'])->name('detach');
+});
+
 Route::get('/', Home::class)->name('home');
 
 Route::view('/a-propos', 'about')->name('about');
