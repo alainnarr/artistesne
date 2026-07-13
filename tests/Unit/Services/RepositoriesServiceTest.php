@@ -26,10 +26,11 @@ class RepositoriesServiceTest extends TestCase
 
         Storage::fake('public');
         $this->service = new RepositoriesService();
-        Schema::create('test_repositoryables', function ($table) {
-            $table->id();
-            $table->timestamps();
-        });
+Schema::dropIfExists('test_repositoryables');
+Schema::create('test_repositoryables', function ($table) {
+    $table->id();
+    $table->timestamps();
+});
     }
 
     private function makeRepositoryable(): Model
