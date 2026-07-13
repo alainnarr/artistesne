@@ -21,8 +21,7 @@ class ActivitiesSeeder extends Seeder
                 $activity['discipline_id'] = $discipline->id;
                 $code = $arrDiscipline['code'] . '.' . $activity['code'];
                 $activity['code'] = $code;
-                Activity::updateOrCreate(['code' => $activity['code']], $activity);
-            }
+                Activity::firstOrCreate(['code' => $activity['code']], $activity);
         }
 
         $this->command?->info("Activities seeded: ".$count.' activity(s).');
