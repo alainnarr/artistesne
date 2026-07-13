@@ -12,8 +12,8 @@ return new class extends Migration {
 
     private function _columns(&$table)
     {
-        $table->date('publication_date')->nullable()->after('enum_show_contact');
-        $table->date('confirmed_at')->nullable()->after('publication_date');
+        $table->date('published_at')->nullable()->after('enum_show_contact');
+        $table->date('confirmed_at')->nullable()->after('published_at');
         $table->date('reminded_at')->nullable()->after('confirmed_at');
     }
 
