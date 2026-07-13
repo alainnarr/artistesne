@@ -61,9 +61,9 @@ class KeywordsService
 
     public function sync(Artist $artist, array $labels): void
     {
-        $currentLabels = KeywordArtist::where('artist_id', $artist->id)
-            ->pluck('keyword_id')
-            ->toArray();
+        $labels = array_values(array_unique(array_map('strtolower', $labels)));
+
+        $currentLabels = $artist->keywords()->pluck('label')->toArray();
 
         $attach = array_diff($labels, $currentLabels);
         $detach = array_diff($currentLabels, $labels);
