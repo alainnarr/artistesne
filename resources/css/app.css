@@ -1,0 +1,205 @@
+@import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
+@source '../../vendor/livewire/flux/stubs/**/*.blade.php';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Masque les éléments Alpine (x-cloak) tant que le composant n'est pas initialisé. */
+[x-cloak] {
+    display: none !important;
+}
+
+@theme {
+    /* Typographie de la charte (chargée via Bunny Fonts dans le layout). */
+    --font-sans: 'Public Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-serif: 'Lora', ui-serif, Georgia, 'Times New Roman', serif;
+
+    /* Palette de marque SCNE / Artistes.ne (tokens Figma DS). */
+    --color-brand: #2e3d3c;             /* text-dark / bg-dark */
+    --color-brand-teal: #477e7b;        /* Bleu canard — accent (italique du titre, bordures actives, indicateur valide) */
+    --color-brand-teal-hover: #3d6f6c;
+    --color-brand-teal-light: #6dafae;  /* Étapes validées du stepper (Figma: domaine/bg-principal) */
+    --color-brand-cream: #fefcf7;       /* text-light */
+    --color-brand-paper: #fefefe;       /* bg-white */
+    --color-brand-mint: #bfeceb;        /* CTA primary / tag primary */
+    --color-brand-mint-hover: #a9e3e2;
+    --color-brand-muted: #5f6665;       /* forms border + helper text */
+    --color-brand-track: #f3f4f4;       /* forms disabled / stepper inactive */
+    --color-brand-hairline: #e1eeed;
+
+    /* Tokens DS étendus (alignés sur la doc Figma). */
+    --color-brand-hover: #496361;       /* Button Primary BG-Hover */
+    --color-brand-mint-soft: #f2fbfb;   /* Bleu poudré clair (Radio hover, etc.) */
+    --color-brand-soft: #a3a7a7;        /* Neutre/N-60 — borders secondary disabled */
+    --color-domain-primary: #6dafae;    /* Domaine principal (carré couleur tag) */
+    --color-domain-secondary: #a7cfce;  /* Domaine secondaire */
+    --color-tag-secondary-bg: #f7f7f7;
+    --color-tag-secondary-border: #e9eae9;
+    --color-success: #007c64;
+    --color-error: #ee0000;
+    --color-neutral-30: #48504f;        /* Forms input BG-Default dark */
+    --color-neutral-90: #f3f4f4;
+
+    --color-zinc-50: #fafafa;
+    --color-zinc-100: #f5f5f5;
+    --color-zinc-200: #e5e5e5;
+    --color-zinc-300: #d4d4d4;
+    --color-zinc-400: #a3a3a3;
+    --color-zinc-500: #737373;
+    --color-zinc-600: #525252;
+    --color-zinc-700: #404040;
+    --color-zinc-800: #262626;
+    --color-zinc-900: #171717;
+    --color-zinc-950: #0a0a0a;
+
+    --color-accent: var(--color-brand);
+    --color-accent-content: var(--color-brand);
+    --color-accent-foreground: var(--color-brand-paper);
+}
+
+@layer base {
+
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+}
+
+[data-flux-field]:not(ui-radio, ui-checkbox) {
+    @apply grid gap-2;
+}
+
+[data-flux-label] {
+    @apply  !mb-0 !leading-tight;
+}
+
+/* ===========================================================================
+   Habillage des contrôles Flux selon la charte (formulaire public).
+   Portée limitée à .register-form pour ne pas affecter Filament / l'admin.
+   =========================================================================== */
+.register-form {
+
+    /* Libellés : petit, medium, vert de marque. */
+    [data-flux-label] {
+        @apply text-xs font-medium text-brand;
+    }
+
+    /* Descriptions / aides sous le champ. */
+    [data-flux-description] {
+        @apply text-sm text-brand-muted;
+    }
+
+    /* Champs texte, date, e-mail, téléphone. */
+    input[data-flux-control]:not([type='checkbox']):not([type='radio']),
+    select[data-flux-control] {
+        @apply h-14 rounded-[2px] border border-brand-muted bg-brand-paper px-4 text-base text-brand shadow-none;
+        border-bottom-color: var(--color-brand-muted);
+    }
+
+    /* Zones de texte. */
+    textarea[data-flux-control] {
+        @apply rounded-[2px] border border-brand-muted bg-brand-paper px-4 py-3 text-base text-brand shadow-none;
+        border-bottom-color: var(--color-brand-muted);
+    }
+
+    /* Placeholders. */
+    [data-flux-control]::placeholder {
+        @apply text-brand-muted/70;
+    }
+
+    /* Groupe input (téléphone) : coins carrés et bordure de marque. */
+    [data-flux-input-group] [data-flux-control],
+    [data-flux-input-group] [data-flux-select-native] {
+        @apply rounded-[2px] border-brand-muted;
+        border-bottom-color: var(--color-brand-muted);
+    }
+
+    /* État de focus. */
+    input:focus[data-flux-control],
+    textarea:focus[data-flux-control],
+    select:focus[data-flux-control] {
+        @apply border-brand outline-none ring-2 ring-brand/20;
+        border-bottom-color: var(--color-brand);
+    }
+
+    /* État invalide. */
+    [data-flux-control][data-invalid] {
+        @apply border-red-500;
+        border-bottom-color: var(--color-red-500);
+    }
+}
+
+input:focus[data-flux-control],
+textarea:focus[data-flux-control],
+select:focus[data-flux-control] {
+    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+}
+
+/* ===========================================================================
+   intl-tel-input — alignement sur la charte graphique.
+   =========================================================================== */
+
+/* Conteneur : occupe toute la largeur, hauteur cohérente avec les autres champs. */
+.iti-wrapper {
+    @apply block;
+}
+
+.iti-wrapper .iti {
+    @apply w-full;
+}
+
+/* Input téléphone étiré. */
+.iti-wrapper .iti__tel-input {
+    @apply h-14 w-full rounded-[2px] border border-brand-muted bg-brand-paper px-4 text-base text-brand focus:outline-none;
+}
+
+.iti-wrapper .iti__tel-input:focus {
+    @apply border-brand-teal;
+}
+
+/* Bouton drapeau : fond transparent, pas de bordure droite par défaut. */
+.iti-wrapper .iti__flag-container .iti__selected-country {
+    @apply bg-transparent px-3 text-brand;
+}
+
+.iti-wrapper .iti__selected-country,
+.iti-wrapper .iti__selected-country:hover,
+.iti-wrapper .iti__selected-country:focus-visible,
+.iti-wrapper .iti__selected-dial-code {
+    @apply text-brand;
+}
+
+/* Dropdown pays : coins carrés, police de marque. */
+.iti-wrapper .iti__country-selector {
+    @apply rounded-[2px] border border-brand-muted bg-brand-paper font-sans text-sm text-brand shadow-lg;
+}
+
+.iti-wrapper .iti__country.iti__highlight,
+.iti-wrapper .iti__country:hover {
+    @apply bg-brand-mint/30;
+}
+
+.iti-wrapper .iti__country-name {
+    @apply text-brand;
+}
+
+.iti-wrapper .iti__country .iti__dial-code {
+    @apply text-brand-muted;
+}
+
+/* Date input: masque l'icône native pour afficher uniquement l'icône Figma. */
+.register-form input.date-input::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}

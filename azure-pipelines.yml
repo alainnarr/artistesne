@@ -1,0 +1,261 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Azure DevOps Pipeline — Inventaire des artistes neuchâtelois·es (SCNE)
+#
+# Branch / tag strategy:
+#   develop  → build (--no-dev) + auto-deploy to Staging (QA)
+#   main     → build only; no auto-deploy (merge target, kept clean)
+#   v*       → build (--no-dev) + create Octopus release + deploy to Production
+#              (blocked by a Manual Approval step in the Octopus process)
+#
+# Workflow:
+#   1. Feature branches are merged into `develop` via PRs.
+#   2. When staging is validated, `develop` is merged into `main`.
+#   3. A release tag (e.g. v1.2.0) is pushed on `main` to ship to production.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: 'SCNE Artistes - $(Date:yyyyMMdd).$(Rev:r)'
+appendCommitMessageToRunName: false
+
+trigger:
+  branches:
+    include:
+      - develop
+  tags:
+    include:
+      - 'v*'
+
+pr: none
+
+variables:
+  - group: scne-deploy                        # OctopusProjectName, OctopusPackageId
+  - name: phpCommand
+    value: 'php8.4'
+  - name: proxyUrl
+    value: 'http://gil.vdn.ne.ch:5865'
+  - name: COMPOSER_CACHE_DIR
+    value: '$(Pipeline.Workspace)/.composer'
+  - name: PackageVersion
+    value: '1.0.$(Build.BuildId)'
+  - name: octopusSpace
+    value: 'WEB'
+
+pool:
+  name: Typo3_2
+
+stages:
+  - stage: Build
+    displayName: Build & deploy
+    jobs:
+      - job: build_and_deploy
+        displayName: Composer + Vite + Octopus
+        timeoutInMinutes: 30
+        workspace:
+          clean: all
+        steps:
+          # ── 1. Sources ────────────────────────────────────────────────────
+          - checkout: self
+            fetchDepth: 1
+            displayName: Checkout sources
+
+          # ── 2. Git credentials (private TFS repos in composer.json) ───────
+          - script: |
+              export HOME=/root/
+              git config --global --get-regexp 'http\..*tfs\.ne\.ch.*\.extraheader' 2>/dev/null \
+                | awk '{print $1}' | while read key; do
+                    git config --global --unset "$key" 2>/dev/null || true
+                done
+              git config --global http.https://tfs.ne.ch.extraheader \
+                "Authorization: Bearer $(System.AccessToken)"
+            displayName: Configure git credentials for TFS
+            env:
+              System.AccessToken: $(System.AccessToken)
+
+          # ── 3. PHP + Composer ─────────────────────────────────────────────
+          - script: |
+              set -eo pipefail
+              export http_proxy="$(proxyUrl)"
+              export https_proxy="$(proxyUrl)"
+              export no_proxy=tfs.ne.ch
+              export HOME=/root/
+              export COMPOSER_HOME="$HOME/.config/composer"
+              $(phpCommand) --version
+              wget https://getcomposer.org/download/2.6.6/composer.phar -S -t 5
+              $(phpCommand) ./composer.phar -V
+            displayName: Download & verify Composer
+
+          - script: |
+              set -eo pipefail
+              export http_proxy="$(proxyUrl)"
+              export https_proxy="$(proxyUrl)"
+              export no_proxy=tfs.ne.ch
+              export HOME=/root/
+              export COMPOSER_HOME="$HOME/.config/composer"
+              rm -rf "$(COMPOSER_CACHE_DIR)/vcs/"
+              mkdir -p /tmp/phpbin && ln -sf "$(which $(phpCommand))" /tmp/phpbin/php
+              export PATH="/tmp/phpbin:$PATH"
+              $(phpCommand) ./composer.phar install \
+                --no-dev \
+                --prefer-dist \
+                --no-interaction \
+                --no-progress \
+                --optimize-autoloader \
+                --classmap-authoritative
+              echo "Composer install completed (--no-dev)."
+            displayName: Composer install (--no-dev)
+
+          # ── 4. Node.js + pnpm + Vite ─────────────────────────────────────
+          - script: |
+              set -eo pipefail
+              export HOME=/root
+              export http_proxy="$(proxyUrl)"
+              export https_proxy="$(proxyUrl)"
+              export no_proxy=tfs.ne.ch
+
+              # Probe pre-installed node binaries (available on vdn-tfs1 for TYPO3 builds)
+              # Fall back to wget download if not found.
+              NODE_PATHS=(
+                "/home/web/utils/node24/bin"
+                "/home/web/utils/node24"
+                "/home/web/utils/node20/bin"
+                "/home/web/utils/node20"
+              )
+              NODE_BIN=""
+              for p in "${NODE_PATHS[@]}"; do
+                if [ -x "$p/node" ]; then
+                  NODE_BIN="$p"
+                  break
+                fi
+              done
+
+              if [ -n "$NODE_BIN" ]; then
+                echo "Using pre-installed node at $NODE_BIN"
+                export PATH="$NODE_BIN:$PATH"
+              else
+                NODE_VERSION="20.19.0"
+                ARCH="linux-x64"
+                NODE_CACHE="/root/.node-cache-${NODE_VERSION}"
+                if [ ! -x "$NODE_CACHE/bin/node" ]; then
+                  echo "Downloading Node.js ${NODE_VERSION}..."
+                  wget -q "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-${ARCH}.tar.xz" \
+                    -O /tmp/node.tar.xz
+                  rm -rf "$NODE_CACHE"
+                  mkdir -p "$NODE_CACHE"
+                  tar -xJf /tmp/node.tar.xz -C "$NODE_CACHE" --strip-components=1
+                  rm -f /tmp/node.tar.xz
+                fi
+                export PATH="$NODE_CACHE/bin:$PATH"
+              fi
+
+              node --version
+              npm --version
+
+              # Install pnpm via npm (proxy already set)
+              npm install -g pnpm@9 --prefer-offline 2>/dev/null || npm install -g pnpm@9
+              pnpm --version
+              pnpm install --frozen-lockfile
+              pnpm run build
+            displayName: Node + pnpm + Vite build
+
+          # ── 5. Copy, prune & set permissions ─────────────────────────────
+          - script: |
+              export HOME=/root/
+              TARGET="$(Build.ArtifactStagingDirectory)/package"
+              rm -rf "$TARGET"
+              mkdir -p "$TARGET"
+              # Phase 1: full copy preserving symlinks
+              cp -ra . "$TARGET/"
+              # Phase 2: resolve symlinks (required for Octopus Calamari extraction)
+              find "$TARGET" -type l | while IFS= read -r link; do
+                real=$(readlink -f "$link")
+                if   [ -d "$real" ]; then rm    "$link" && cp -r  "$real" "$link"
+                elif [ -f "$real" ]; then rm    "$link" && cp     "$real" "$link"
+                else                       rm    "$link"
+                fi
+              done
+              cd "$TARGET"
+              # Remove artefacts that must not ship
+              rm -rf .git .github node_modules tests composer.phar
+              rm -rf storage/logs/*.log \
+                     storage/framework/cache/data/* \
+                     storage/framework/sessions/* \
+                     storage/framework/views/*
+              # Ensure Laravel runtime dirs exist on the target after extraction
+              mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache
+              # Permissions
+              chown -R 1001:33 . || echo "ownership change skipped"
+              chmod -R u+rwx,g+rwx . || echo "permission change skipped"
+              echo "--- Package contents ---"
+              ls -la "$TARGET/"
+            displayName: Copy, prune & set permissions
+
+          # ── 6. Archive → tar.gz ───────────────────────────────────────────
+          - task: ArchiveFiles@2
+            displayName: Create tar.gz package
+            inputs:
+              rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/package/'
+              includeRootFolder: false
+              archiveType: tar
+              archiveFile: '$(Build.ArtifactStagingDirectory)/octopacked/$(OctopusPackageId).$(PackageVersion).tar.gz'
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish build artifact
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)/octopacked/$(OctopusPackageId).$(PackageVersion).tar.gz'
+
+          # ── 7. Octopus push ───────────────────────────────────────────────
+          - task: octopusdeploy.octopus-deploy-build-release-tasks.octopus-push.OctopusPush@6
+            displayName: Push package to Octopus
+            inputs:
+              OctoConnectedServiceName: Octopus
+              Space: '$(octopusSpace)'
+              Packages: '$(Build.ArtifactStagingDirectory)/octopacked/$(OctopusPackageId).$(PackageVersion).tar.gz'
+              Replace: true
+
+          # ── 8a. Staging — triggered by push to develop ───────────────────
+          - task: octopusdeploy.octopus-deploy-build-release-tasks.octopus-create-release.OctopusCreateRelease@6
+            displayName: Create Octopus release (Staging)
+            inputs:
+              OctoConnectedServiceName: Octopus
+              Space: '$(octopusSpace)'
+              Project: '$(OctopusProjectName)'
+              ReleaseNumber: '$(PackageVersion)'
+              DefaultPackageVersion: '$(PackageVersion)'
+              GitRef: '$(Build.SourceBranch)'
+              IgnoreIfAlreadyExists: true
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+
+          - task: octopusdeploy.octopus-deploy-build-release-tasks.octopus-deploy.OctopusDeployRelease@6
+            displayName: Deploy to Staging (VDN-TYPOS1)
+            inputs:
+              OctoConnectedServiceName: Octopus
+              Space: '$(octopusSpace)'
+              Project: '$(OctopusProjectName)'
+              ReleaseNumber: '$(PackageVersion)'
+              Environments: 'QA'
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+
+          # ── 8b. Production — triggered by tag v* (pushed from main) ──────
+          # The Octopus deployment process includes a Manual Approval step that
+          # blocks the rollout until a team member confirms in the Octopus UI.
+          - task: octopusdeploy.octopus-deploy-build-release-tasks.octopus-create-release.OctopusCreateRelease@6
+            displayName: Create Octopus release (Production)
+            inputs:
+              OctoConnectedServiceName: Octopus
+              Space: '$(octopusSpace)'
+              Project: '$(OctopusProjectName)'
+              ReleaseNumber: '$(PackageVersion)'
+              DefaultPackageVersion: '$(PackageVersion)'
+              GitRef: '$(Build.SourceBranch)'
+              IgnoreIfAlreadyExists: true
+            condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
+
+          - task: octopusdeploy.octopus-deploy-build-release-tasks.octopus-deploy.OctopusDeployRelease@6
+            displayName: Deploy to Production (VDN-TYPOP1) — requires manual approval
+            inputs:
+              OctoConnectedServiceName: Octopus
+              Space: '$(octopusSpace)'
+              Project: '$(OctopusProjectName)'
+              ReleaseNumber: '$(PackageVersion)'
+              Environments: 'Production'
+              WaitForDeployment: true
+            condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))

@@ -1,0 +1,20 @@
+{
+    "agents": [
+        "copilot"
+    ],
+    "cloud": false,
+    "mcp": true,
+    "nightwatch": false,
+    "packages": [
+        "filament/filament"
+    ],
+    "sail": true,
+    "skills": [
+        "fortify-development",
+        "laravel-best-practices",
+        "fluxui-development",
+        "livewire-development",
+        "pest-testing",
+        "tailwindcss-development"
+    ]
+}
