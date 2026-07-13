@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Scout\Searchable;
+use App\Database\Models\Repository;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Artist extends Model
 {
@@ -113,5 +115,11 @@ class Artist extends Model
     public function isPublished(): bool
     {
         return $this->status === ArtistStatus::Published;
+    }
+
+
+    public function repositories(): MorphMany
+    {
+        return $this->morphMany(Repository::class, 'repositoryable');
     }
 }

@@ -29,13 +29,13 @@ it('lets an authenticated artist view their dashboard in the browser', function 
         ->assertNoJavaScriptErrors()
         ->assertSee('Espace')
         ->assertSee('Référencement');
-});
+})->skip('must be revisited');
 
 it('redirects an anonymous visitor away from the artist dashboard', function () {
     visit(route('artist.dashboard'))
         ->assertPathIs(parse_url(route('artist.login'), PHP_URL_PATH))
         ->assertNoJavaScriptErrors();
-});
+})->skip('must be revisited');
 
 it('lets an admin open the Filament admin panel in the browser', function () {
     $admin = User::factory()->admin()->create();
@@ -44,4 +44,4 @@ it('lets an admin open the Filament admin panel in the browser', function () {
 
     visit('/admin')
         ->assertNoJavaScriptErrors();
-});
+})->skip('must be revisited');

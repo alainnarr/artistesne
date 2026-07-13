@@ -1,0 +1,17 @@
+<?php
+
+namespace App\Enums;
+
+enum RepositoryDisk: string
+{
+    case PUBLIC = 'public';
+    case PRIVATE = 'private';
+
+    public function label()
+    {
+        return match ($this) {
+            self::PUBLIC => 'Public',
+            self::PRIVATE => 'Private',
+        };
+    }
+}
