@@ -125,7 +125,7 @@ class Registration extends Model
 
     public function links(): HasMany
     {
-        return $this->hasMany(Link::class, 'artist_id');
+        return $this->hasMany(Link::class, 'registration_id');
     }
 
     // TODO Uncomment this relation when the User model is created
