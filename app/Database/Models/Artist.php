@@ -79,9 +79,9 @@ class Artist extends Model
         return $this->hasMany(KeywordArtist::class, 'artist_id');
     }
 
-    public function activities(): HasMany
+    public function activities(): BelongsToMany
     {
-        return $this->hasMany(Activity::class, 'artist_id');
+        return $this->belongsToMany(Activity::class, 'activities_artists', 'artist_id', 'activity_id');
     }
 
     public function activitiesArtists(): HasMany
