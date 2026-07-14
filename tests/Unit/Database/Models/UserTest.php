@@ -76,7 +76,7 @@ class UserTest extends TestCase
 
         $this->assertCount(6, $rules);
         $this->assertEquals('required|string|max:36|unique:newusers,uuid,,id', $rules['uuid']);
-        $this->assertEquals('required|string|email|max:200|unique:newusers,email,,id', $rules['email']);
+        $this->assertEquals('required|string|email|max:125|unique:newusers,email,,id', $rules['email']);
         $this->assertEquals('required|string|max:125', $rules['name']);
         $this->assertIsArray($rules['enum_role']);
         $this->assertEquals('required', $rules['enum_role'][0]);
