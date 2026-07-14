@@ -59,7 +59,7 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
 
         $rules = [
             'uuid' => 'required|string|max:36|unique:newusers,uuid,'.$id.',id',
-            'email' => 'required|string|email|max:200|unique:newusers,email,'.$id.',id',
+            'email' => 'required|string|email|max:125|unique:newusers,email,'.$id.',id',
             'name' => 'required|string|max:125',
             'enum_role' => ['required', new Enum(UserRole::class)],
             'adfs_id' => 'nullable|string|max:255|unique:newusers,adfs_id,'.$id.',id',
