@@ -26,8 +26,8 @@ class ArtistsService
         $data = [
             'registration_id' => $registration->id,
             'user_id' => $user->id,
-            'artist_name' => $user->name,
-            'email' => $user->email,
+            'artist_name' => $registration->name,
+            'email' => $registration->email,
             'phone' => $registration->phone,
             'city' => $registration->city,
             'discipline_secondary' => $registration->discipline_secondary,

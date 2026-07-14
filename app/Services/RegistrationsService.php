@@ -76,17 +76,17 @@ class RegistrationsService
     ): Registration {
         $reviewer = Auth::user();
 
+        if ($status === RegistrationStatus::APPROVED) {
+            $user = $this->usersService->create($registration->email, $registration->name);
+            $this->artistsService->create($registration, $user);
+        }
+
         $registration->update([
             'enum_status' => $status,
             'reviewed_at' => now(),
             'reviewed_by' => $reviewer?->id,
             'review_notes' => $reviewNotes,
         ]);
-
-        if ($status === RegistrationStatus::APPROVED) {
-            $user = $this->usersService->create($registration->email, $registration->name);
-            $this->artistsService->create($registration, $user);
-        }
 
         // TODO - Notify according to status
 
