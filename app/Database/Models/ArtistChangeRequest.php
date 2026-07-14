@@ -49,7 +49,7 @@ class ArtistChangeRequest extends Model
             'payload' => 'required|json',
             'enum_status' => ['required', new Enum(ArtistChangeRequestStatus::class)],
             'reviewed_at' => 'nullable|date',
-            'reviewed_by' => 'nullable|integer|exists:users,id',
+            'reviewed_by' => 'nullable|integer|exists:newusers,id',
             'review_notes' => 'nullable|string',
         ];
 
