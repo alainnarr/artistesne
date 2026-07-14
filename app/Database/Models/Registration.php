@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Registration extends Model
 {
@@ -128,10 +129,25 @@ class Registration extends Model
         return $this->hasMany(Link::class, 'registration_id');
     }
 
-    // TODO Uncomment this relation when the User model is created
-    // public function reviewedBy(): BelongsTo
-    // {
-    //     return $this->belongsTo(User::class, 'reviewed_by');
-    // }
+    public function reviewedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
     /* * * * * * * * END - RELATIONS * * * * * * * */
+
+    /* * * * * * * * ACCESSORS * * * * * * * */
+    public function name(): Attribute
+    {
+        return Attribute::make(
+            get: fn($value) => $this->artist_name ?: $this->real_name,
+        );
+    }
+
+    public function city(): Attribute
+    {
+        return Attribute::make(
+            get: fn($value) => $this->locality ?: $this->residence_location,
+        );
+    }
+    /* * * * * * * * END - ACCESSORS * * * * * * * */
 }

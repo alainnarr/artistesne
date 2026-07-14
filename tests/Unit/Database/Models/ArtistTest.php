@@ -45,7 +45,6 @@ class ArtistTest extends TestCase
             'artist_name',
             'email',
             'phone',
-            'rep_image',
             'biography',
             'city',
             'discipline_secondary',
@@ -68,13 +67,12 @@ class ArtistTest extends TestCase
     {
         $rules = Artist::getRules();
 
-        $this->assertCount(14, $rules);
+        $this->assertCount(13, $rules);
         $this->assertEquals('required|exists:registrations,id', $rules['registration_id']);
         $this->assertEquals('required|exists:users,id', $rules['user_id']);
         $this->assertEquals('required|string|max:255', $rules['artist_name']);
         $this->assertEquals('nullable|email|max:125', $rules['email']);
         $this->assertEquals('nullable|string|max:15', $rules['phone']);
-        $this->assertEquals('nullable|exists:repositories,id', $rules['rep_image']);
         $this->assertEquals('nullable|string', $rules['biography']);
         $this->assertEquals('nullable|string|max:125', $rules['city']);
         $this->assertEquals('nullable|exists:disciplines,id', $rules['discipline_secondary']);
@@ -139,14 +137,6 @@ class ArtistTest extends TestCase
 
         $this->assertInstanceOf(BelongsTo::class, $relation);
         $this->assertInstanceOf(User::class, $relation->getRelated());
-    }
-
-    public function testRepImageRelation(): void
-    {
-        $relation = $this->makeModel()->repImage();
-
-        $this->assertInstanceOf(BelongsTo::class, $relation);
-        $this->assertInstanceOf(Repository::class, $relation->getRelated());
     }
 
     public function testRepositoriesRelation(): void
