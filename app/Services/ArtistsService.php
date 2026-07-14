@@ -28,7 +28,7 @@ class ArtistsService
             'user_id' => $user->id,
             'artist_name' => $user->name,
             'email' => $user->email,
-            'phone' => $user->phone,
+            'phone' => $registration->phone,
             'city' => $registration->city,
             'discipline_secondary' => $registration->discipline_secondary,
             'enum_status' => $status,
