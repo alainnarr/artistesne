@@ -164,15 +164,23 @@ class ArtistsServiceTest extends TestCase {
 
     public function testUpdateReplicatesImage(): void {
         $artist = $this->seedArtist();
-        $image = $this->seedRepository();
+
         $changeRequest = ArtistChangeRequest::create([
-                                                         'artist_id' => $artist->id,
-                                                         'payload' => [
-                                                             'image' => true,
-                                                         ],
-                                                         'image_id' => $image->id,
-                                                     ]);
+            'artist_id' => $artist->id,
+            'payload' => ['image' => true],
+        ]);
+
+        // Attach an image repository to the change request so $changeRequest->image resolves.
+        $changeRequest->repositories()->create([
+            'enum_disk' => \App\Enums\RepositoryDisk::PUBLIC,
+            'path' => 'repositories/aa/bb/test.jpg',
+            'name' => 'test.jpg',
+            'file_type' => 'image/jpeg',
+            'size' => 10,
+        ]);
+
         $changeRequest->load('image');
+
         $this->repositoryService->shouldReceive('replicateRepository')->once();
         $this->service->update($artist, $changeRequest);
     }
