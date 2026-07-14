@@ -86,7 +86,7 @@ trait Trait_Seed
             array_merge([
                             'uuid' => (string) Str::uuid(),
                             'email' => $email,
-                            'name' => $attributes['email'] ?? 'Name',
+                            'name' => $attributes['name'] ?? 'Name',
                             'enum_role' => $attributes['enum_role'] ?? UserRole::Artist,
                             'adfs_id' => $attributes['adfs_id'] ?? null,
                             'magic_link' => $attributes['magic_link'] ?? null,
