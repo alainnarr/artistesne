@@ -44,8 +44,7 @@ class Artist extends Model
 
         $rules = [
             'registration_id' => 'required|exists:registrations,id',
-//            'user_id' => 'required|exists:users,id',
-            'user_id' => 'required',
+            'user_id' => 'required|exists:newusers,id',
             'artist_name' => 'required|string|max:255',
             'email' => 'nullable|email|max:125',
             'phone' => 'nullable|string|max:15',
