@@ -61,6 +61,13 @@ Route::prefix('test-keywords')->name('test-keywords.')->group(function () {
     Route::post('/detach', [KeywordsTestController::class, 'detach'])->name('detach');
 });
 
+// TODO : Remove this test route when the keywords service is fully integrated into the application.
+use App\Http\Controllers\ArtistChangeRequestTestController;
+Route::prefix('test-changes')->name('test-changes.')->group(function () {
+    Route::get('/', [ArtistChangeRequestTestController::class, 'index'])->name('index');
+    Route::post('/', [ArtistChangeRequestTestController::class, 'store'])->name('store');
+});
+
 Route::get('/', Home::class)->name('home');
 
 Route::view('/a-propos', 'about')->name('about');

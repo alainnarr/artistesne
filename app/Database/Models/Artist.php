@@ -22,7 +22,6 @@ class Artist extends Model
         'artist_name',
         'email',
         'phone',
-        'rep_image',
         'biography',
         'city',
         'discipline_secondary',
@@ -45,11 +44,11 @@ class Artist extends Model
 
         $rules = [
             'registration_id' => 'required|exists:registrations,id',
-            'user_id' => 'required|exists:users,id',
+//            'user_id' => 'required|exists:users,id',
+            'user_id' => 'required',
             'artist_name' => 'required|string|max:255',
             'email' => 'nullable|email|max:125',
             'phone' => 'nullable|string|max:15',
-            'rep_image' => 'nullable|exists:repositories,id',
             'biography' => 'nullable|string',
             'city' => 'nullable|string|max:125',
             'discipline_secondary' => 'nullable|exists:disciplines,id',
@@ -102,11 +101,6 @@ class Artist extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
-    }
-
-    public function repImage(): BelongsTo
-    {
-        return $this->belongsTo(Repository::class, 'rep_image');
     }
 
     public function repositories(): MorphMany

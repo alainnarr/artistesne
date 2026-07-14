@@ -165,4 +165,39 @@ class RepositoriesService
         $parts = str_split($uuid, 2);
         return 'repositories/' . Arr::first($parts) . '/' . Arr::last($parts);
     }
+
+    public function replicateRepository(
+        Repository $repository,
+        Model $newRepositoryable
+    ): Repository {
+        $disk = $repository->enum_disk;
+        $newPath = null;
+
+        try {
+            $extension = pathinfo($repository->path, PATHINFO_EXTENSION);
+
+            $newPath = $this->getBasePath()
+                . '/'
+                . Str::uuid()
+                . ($extension ? '.' . $extension : '');
+
+            Storage::disk($disk->value)
+                ->copy($repository->path, $newPath);
+
+            return $newRepositoryable->repositories()->create([
+                'enum_disk' => $disk,
+                'path' => $newPath,
+                'name' => $repository->name,
+                'file_type' => $repository->file_type,
+                'size' => $repository->size,
+            ]);
+
+        } catch (Exception $exception) {
+            if ($newPath) {
+                $this->storage_destroyFile($newPath, $disk);
+            }
+
+            throw $exception;
+        }
+    }
 }

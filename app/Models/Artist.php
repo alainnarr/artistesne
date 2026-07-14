@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Scout\Searchable;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use App\Database\Models\Repository;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 

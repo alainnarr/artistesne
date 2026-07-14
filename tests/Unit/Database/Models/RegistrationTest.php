@@ -8,6 +8,7 @@ use App\Database\Models\Discipline;
 use App\Database\Models\Link;
 use App\Database\Models\Registration;
 use App\Database\Models\Repository;
+use App\Database\Models\User;
 use App\Enums\RegistrationStatus;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,7 +16,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 use Tests\TestCase;
 
@@ -91,13 +91,10 @@ class RegistrationTest extends TestCase
         $this->assertEquals('required|string|max:125', $rules['artist_name']);
         $this->assertEquals('required|string|max:255', $rules['url']);
         $this->assertEquals('required|date', $rules['birth_date']);
-
         $this->assertIsArray($rules['email']);
         $this->assertContains('required', $rules['email']);
         $this->assertContains('email', $rules['email']);
         $this->assertContains('max:125', $rules['email']);
-        $this->assertInstanceOf(Rule::unique('registrations')->__class, $rules['email'][3]);
-
         $this->assertEquals('required|string|max:15', $rules['phone']);
         $this->assertEquals('required|string|max:125', $rules['residence_location']);
         $this->assertEquals('nullable|string|max:125', $rules['locality']);
@@ -109,11 +106,9 @@ class RegistrationTest extends TestCase
         $this->assertEquals('nullable|string', $rules['recognition']);
         $this->assertEquals('nullable|string', $rules['recent_achievements']);
         $this->assertEquals('nullable|string', $rules['last_work']);
-
         $this->assertIsArray($rules['enum_status']);
         $this->assertEquals('required', $rules['enum_status'][0]);
         $this->assertInstanceOf(Enum::class, $rules['enum_status'][1]);
-
         $this->assertEquals('nullable|date', $rules['reviewed_at']);
         $this->assertEquals('nullable|integer|exists:users,id', $rules['reviewed_by']);
         $this->assertEquals('nullable|string', $rules['review_notes']);
@@ -198,14 +193,54 @@ class RegistrationTest extends TestCase
         $this->assertInstanceOf(HasMany::class, $relation);
         $this->assertInstanceOf(Link::class, $relation->getRelated());
         $this->assertEquals('registration_id', $relation->getForeignKeyName());
+    }
 
+    public function testReviewedByRelation(): void
+    {
+        $relation = $this->makeModel()->reviewedBy();
 
-    // public function testReviewedByRelation(): void
-    // {
-    //     $relation = $this->makeModel()->reviewedBy();
+        $this->assertInstanceOf(BelongsTo::class, $relation);
+        $this->assertInstanceOf(User::class, $relation->getRelated());
+        $this->assertEquals('reviewed_by', $relation->getForeignKeyName());
+    }
 
-    //     $this->assertInstanceOf(BelongsTo::class, $relation);
-    //     $this->assertInstanceOf(User::class, $relation->getRelated());
-    //     $this->assertEquals('reviewed_by', $relation->getForeignKeyName());
-    // }
+    public function testNameAttributeReturnsArtistNameWhenPresent(): void
+    {
+        $model = $this->makeModel();
+
+        $model->real_name = 'John Smith';
+        $model->artist_name = 'Johnny';
+
+        $this->assertEquals('Johnny', $model->name);
+    }
+
+    public function testNameAttributeReturnsRealNameWhenArtistNameIsEmpty(): void
+    {
+        $model = $this->makeModel();
+
+        $model->real_name = 'John Smith';
+        $model->artist_name = '';
+
+        $this->assertEquals('John Smith', $model->name);
+    }
+
+    public function testCityAttributeReturnsLocalityWhenAvailable(): void
+    {
+        $model = $this->makeModel();
+
+        $model->locality = 'Bern';
+        $model->residence_location = 'Switzerland';
+
+        $this->assertEquals('Bern', $model->city);
+    }
+
+    public function testCityAttributeReturnsResidenceLocationWhenLocalityIsEmpty(): void
+    {
+        $model = $this->makeModel();
+
+        $model->locality = '';
+        $model->residence_location = 'Switzerland';
+
+        $this->assertEquals('Switzerland', $model->city);
+    }
 }

@@ -22,6 +22,7 @@ class ActivitiesSeeder extends Seeder
                 $code = $arrDiscipline['code'] . '.' . $activity['code'];
                 $activity['code'] = $code;
                 Activity::firstOrCreate(['code' => $activity['code']], $activity);
+            }
         }
 
         $this->command?->info("Activities seeded: ".$count.' activity(s).');

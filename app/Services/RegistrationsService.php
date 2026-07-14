@@ -16,6 +16,8 @@ class RegistrationsService
         private readonly ActivitiesService $activitiesService,
         private readonly RepositoriesService $repositoryService,
         private readonly LinksService $linksService,
+        private readonly UsersService $usersService,
+        private readonly ArtistsService $artistsService
     ) {}
 
     public function create(array $data): Registration
@@ -81,10 +83,12 @@ class RegistrationsService
             'review_notes' => $reviewNotes,
         ]);
 
-        // TODO: Implement the logic for notifications and user/artist creation based on the status change.
-        // IF APPROUVED: create User, Create Artist, Notificate
-        // IF REPROUVED: NOTIFICATE
-        // IF PENDING: NOTIFICATE
+        if ($status === RegistrationStatus::APPROVED) {
+            $user = $this->usersService->create($registration->email, $registration->name);
+            $this->artistsService->create($registration, $user);
+        }
+
+        // TODO - Notify according to status
 
         return $registration;
     }
