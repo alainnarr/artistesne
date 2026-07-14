@@ -4,9 +4,6 @@ namespace App\Services;
 
 use App\Database\Models\User;
 use App\Enums\UserRole;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
