@@ -52,6 +52,15 @@ class ArtistsService
     public function update(Artist $artist, ArtistChangeRequest $changeRequest): Artist
     {
         $data = $changeRequest->payload;
+
+        if (is_string($data)) {
+            $data = json_decode($data, true) ?? [];
+        }
+
+        if (! is_array($data)) {
+            $data = [];
+        }
+
         $artistData = Arr::except($data, ['activities', 'links', 'keywords', 'image']);
         Validator::make($artistData, Artist::getRules(array_keys($artistData), ['id' => $artist->id,]))->validate();
 
