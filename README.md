@@ -31,7 +31,6 @@ Application Laravel pour présenter les artistes du canton de Neuchâtel, permet
 1. Install PHP dependencies and prepare the application environment.
 
    ```bash
-   chmod +x vendor/bin/sail
    composer install
    cp .env.example .env
    ```
@@ -45,7 +44,7 @@ Application Laravel pour présenter les artistes du canton de Neuchâtel, permet
 3. Generate the application key and run the database migrations.
 
    ```bash
-   vendor/bin/sail up -d
+   vendor/bin/sail artisan key:generate
    vendor/bin/sail artisan migrate
    ```
 
