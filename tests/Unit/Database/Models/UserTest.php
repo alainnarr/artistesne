@@ -90,7 +90,7 @@ class UserTest extends TestCase
         $rules = User::getRules([], ['id' => 10]);
 
         $this->assertEquals('required|string|max:36|unique:newusers,uuid,10,id', $rules['uuid']);
-        $this->assertEquals('required|string|email|max:200|unique:newusers,email,10,id', $rules['email']);
+        $this->assertEquals('required|string|email|max:125|unique:newusers,email,10,id', $rules['email']);
         $this->assertEquals('nullable|string|max:255|unique:newusers,adfs_id,10,id', $rules['adfs_id']);
     }
 
