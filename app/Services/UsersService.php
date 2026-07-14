@@ -10,7 +10,6 @@ use Illuminate\Support\Str;
 class UsersService
 {
 
-    public function __construct() {}
 
     public function create(string $email, string $name, UserRole $role = UserRole::Artist, ?string $adfsId = null, ?string $magicLink = null): User
     {
