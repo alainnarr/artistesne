@@ -19,6 +19,7 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table($this->tableName, function (Blueprint $table) {
+            $table->unsignedBigInteger('rep_image')->nullable();
             $table->foreign('user_id')->references('id')->on('users');
             $table->foreign('rep_image')->references('id')->on('repositories');
         });
