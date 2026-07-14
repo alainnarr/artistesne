@@ -198,22 +198,34 @@ class RegistrationsServiceTest extends TestCase
         ]);
     }
 
-    // public function testChangeStatusUpdatesRegistrationFields(): void
-    // {
-    //     $registration = $this->service->create($this->validData());
+    public function testChangeStatusUpdatesRegistrationFields(): void
+    {
+        $registration = $this->service->create($this->validData());
 
-    //     $updated = $this->service->changeStatus(
-    //         $registration,
-    //         RegistrationStatus::APPROVED,
-    //         'Looks good'
-    //     );
+        $updated = $this->service->changeStatus(
+            $registration,
+            RegistrationStatus::APPROVED,
+            'Looks good'
+        );
 
-    //     $this->assertEquals(RegistrationStatus::APPROVED, $updated->enum_status);
-    //     $this->assertNotNull($updated->reviewed_at);
-    //     $this->assertEquals('Looks good', $updated->review_notes);
-    //     $this->assertDatabaseHas('registrations', [
-    //         'id' => $registration->id,
-    //         'review_notes' => 'Looks good',
-    //     ]);
-    // }
+        $this->assertEquals(RegistrationStatus::APPROVED, $updated->enum_status);
+        $this->assertNotNull($updated->reviewed_at);
+        $this->assertEquals('Looks good', $updated->review_notes);
+
+        $this->assertDatabaseHas('registrations', [
+            'id' => $registration->id,
+            'review_notes' => 'Looks good',
+        ]);
+
+        $this->assertDatabaseHas('newusers', [
+            'email' => $registration->email,
+            'name' => $registration->name,
+        ]);
+
+        $this->assertDatabaseHas('newartists', [
+            'registration_id' => $registration->id,
+            'artist_name' => $registration->name,
+            'email' => $registration->email,
+        ]);
+    }
 }
