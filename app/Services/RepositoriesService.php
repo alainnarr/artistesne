@@ -181,9 +181,9 @@ class RepositoriesService
                 . Str::uuid()
                 . ($extension ? '.' . $extension : '');
 
-            Storage::disk($disk->value)
-                ->copy($repository->path, $newPath);
-
+            if (! Storage::disk($disk->value)->copy($repository->path, $newPath)) {
+                throw new Exception("Repositories - Failed to copy file from [{$repository->path}] to [{$newPath}]");
+            }
             return $newRepositoryable->repositories()->create([
                 'enum_disk' => $disk,
                 'path' => $newPath,
