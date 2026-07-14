@@ -77,8 +77,7 @@ class ArtistChangeRequestsService
             ]);
 
             if (!empty($data['image'])) {
-                $repository = $this->repositoryService->create($artistChangeRequest, $data['image']);
-                $payload['image'] = $repository->id;
+                $this->repositoryService->create($artistChangeRequest, $data['image']);
             }
 
             return $artistChangeRequest->fresh(['image']);
