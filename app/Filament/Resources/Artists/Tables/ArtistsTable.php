@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\Artists\Tables;
 
+use App\Database\Models\Artist;
 use App\Enums\ArtistStatus;
 use App\Filament\Exports\ArtistExporter;
-use App\Models\Artist;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -21,17 +23,18 @@ class ArtistsTable
     {
         return $table
             ->columns([
-                TextColumn::make('name')
+                TextColumn::make('artist_name')
                     ->label("Nom d'artiste")
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('discipline')
-                    ->label('Discipline')
+                TextColumn::make('disciplineMain.label')
+                    ->label('Domaine')
                     ->searchable()
                     ->toggleable(),
-                TextColumn::make('status')
+                TextColumn::make('enum_status')
                     ->label('Statut')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (ArtistStatus $state) => $state->label()),
                 TextColumn::make('user.email')
                     ->label('Compte')
                     ->toggleable()
@@ -42,7 +45,7 @@ class ArtistsTable
                     ->sortable(),
             ])
             ->filters([
-                SelectFilter::make('status')
+                SelectFilter::make('enum_status')
                     ->label('Statut')
                     ->options(ArtistStatus::class),
             ])
@@ -57,7 +60,7 @@ class ArtistsTable
                     ->visible(fn (Artist $record): bool => ! $record->isPublished())
                     ->action(function (Artist $record): void {
                         $record->update([
-                            'status' => ArtistStatus::Published,
+                            'enum_status' => ArtistStatus::Published->value,
                             'published_at' => $record->published_at ?? now(),
                         ]);
                         Notification::make()->title('Artiste affiché')->success()->send();
@@ -72,7 +75,7 @@ class ArtistsTable
                     ->modalDescription('Le profil ne sera plus visible publiquement.')
                     ->visible(fn (Artist $record): bool => $record->isPublished())
                     ->action(function (Artist $record): void {
-                        $record->update(['status' => ArtistStatus::Draft]);
+                        $record->update(['enum_status' => ArtistStatus::Draft->value]);
                         Notification::make()->title('Artiste masqué')->success()->send();
                     }),
 
@@ -86,6 +89,6 @@ class ArtistsTable
                     DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('name');
+            ->defaultSort('artist_name');
     }
 }

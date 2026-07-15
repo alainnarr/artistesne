@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Database\Models;
 
 use App\Database\Model;
@@ -13,8 +15,6 @@ class Synonym extends Model
         'activity_id',
         'label',
     ];
-
-    protected $updatable = [];
 
     /* * * * * * * * VALIDATION * * * * * * * */
     public static function getRules(array $fields = [], $register = null): array

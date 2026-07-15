@@ -2,11 +2,11 @@
 
 namespace App\Livewire\Artist;
 
+use App\Database\Models\User;
+use App\Enums\ArtistShowContact;
 use App\Livewire\Artist\Concerns\ManagesArtistProfileFields;
-use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -36,11 +36,11 @@ class ProfileSetup extends Component
     #[Validate('required|string|max:5000')]
     public string $biography = '';
 
-    #[Validate('nullable|string|max:120')]
-    public ?string $discipline = null;
+    #[Validate('nullable|integer|exists:disciplines,id')]
+    public ?int $discipline_main_id = null;
 
-    #[Validate('nullable|string|max:120')]
-    public ?string $secondary_discipline = null;
+    #[Validate('nullable|integer|exists:disciplines,id')]
+    public ?int $discipline_secondary = null;
 
     /** @var array<int, string> */
     #[Validate('array|max:4')]
@@ -92,21 +92,21 @@ class ProfileSetup extends Component
         /** @var User $user */
         $user = auth()->user();
         $artist = $user->artist;
-        abort_unless($artist, 404);
+        abort_unless($artist !== null, 404);
 
-        $this->displayName = $artist->name;
+        $this->displayName = $artist->artist_name;
         $this->displayEmail = $user->email;
         $this->displayLocality = $artist->city ?? '—';
 
         $this->biography = $this->htmlToText($artist->biography ?? '');
-        $this->discipline = $artist->discipline;
-        $this->secondary_discipline = $artist->secondary_discipline;
+        $this->discipline_main_id = $artist->discipline_main_id;
+        $this->discipline_secondary = $artist->discipline_secondary;
         $this->activities = $artist->activities ?? [];
         $this->secondary_activities = $artist->secondary_activities ?? [];
         $this->keywords = $artist->keywords ?? [];
         $this->links = $artist->links ?? [];
         $this->collaborations = $artist->collaborations ?? [];
-        $this->display_contact_button = (bool) $artist->display_contact_button;
+        $this->display_contact_button = $artist->enum_show_contact?->toBool() ?? false;
     }
 
     public function nextStep(): void
@@ -118,25 +118,6 @@ class ProfileSetup extends Component
     public function previousStep(): void
     {
         $this->currentStep = max(1, $this->currentStep - 1);
-    }
-
-    // ── Secondary activity helpers (specific to this component) ───────────────
-
-    public function addSecondaryActivity(): void
-    {
-        $value = trim($this->newSecondaryActivity);
-
-        if ($value !== '') {
-            $this->secondary_activities[] = $value;
-        }
-
-        $this->newSecondaryActivity = '';
-    }
-
-    public function removeSecondaryActivity(int $index): void
-    {
-        unset($this->secondary_activities[$index]);
-        $this->secondary_activities = array_values($this->secondary_activities);
     }
 
     // ── Save ────────────────────────────────────────────────────────────────
@@ -151,18 +132,18 @@ class ProfileSetup extends Component
 
         $artist->forceFill([
             'biography' => $this->textToHtml($this->biography),
-            'discipline' => $this->discipline,
-            'secondary_discipline' => $this->secondary_discipline,
+            'discipline_main_id' => $this->discipline_main_id,
+            'discipline_secondary' => $this->discipline_secondary,
             'activities' => array_values($this->activities),
             'secondary_activities' => array_values($this->secondary_activities),
             'keywords' => array_values($this->keywords),
             'links' => array_values($this->links),
             'collaborations' => array_values($this->collaborations),
-            'display_contact_button' => $this->display_contact_button,
+            'enum_show_contact' => ArtistShowContact::fromBool($this->display_contact_button)->value,
         ]);
 
         if ($this->photo) {
-            $artist->cover_image = $this->storeBwPortrait($this->photo, $artist->cover_image);
+            $this->storeBwPortrait($artist, $this->photo);
         }
 
         $artist->save();
@@ -178,9 +159,9 @@ class ProfileSetup extends Component
 
         return view('livewire.artist.profile-setup', [
             'disciplineOptions' => $this->getDisciplineOptionsProperty(),
-            'currentImageUrl' => $artist?->cover_image
-                ? Storage::url($artist->cover_image)
-                : null,
+            'mainActivityOptions' => $this->getMainActivityOptionsProperty(),
+            'secondaryActivityOptions' => $this->getSecondaryActivityOptionsProperty(),
+            'currentImageUrl' => $artist?->repImage?->file,
         ]);
     }
 }

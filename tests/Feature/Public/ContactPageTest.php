@@ -6,7 +6,8 @@ use Livewire\Livewire;
 it('renders the public contact page', function () {
     $this->get(route('contact'))
         ->assertOk()
-        ->assertSee('Nous contacter')
+        ->assertSee('Nous')
+        ->assertSee('contacter')
         ->assertSee('Formulaire de contact');
 });
 

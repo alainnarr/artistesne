@@ -38,6 +38,16 @@
         {{-- Séparateur --}}
         <span class="my-12 block h-px w-12 bg-brand-teal opacity-40"></span>
 
+        {{-- CTA artiste --}}
+        <a href="{{ route('artist.register') }}"
+           class="inline-flex items-center gap-2 rounded-none border border-brand-teal px-5 py-2.5 font-sans text-sm font-medium text-brand-teal transition-colors hover:bg-brand-teal hover:text-brand-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-teal"
+        >
+            Déposer une demande de référencement
+        </a>
+
+        {{-- Séparateur --}}
+        <span class="my-12 block h-px w-12 bg-brand-teal opacity-40"></span>
+
         {{-- Logo canton --}}
         <a href="https://www.ne.ch/" target="_blank" rel="noopener" aria-label="République et canton de Neuchâtel" class="opacity-40 transition-opacity hover:opacity-70 mt-4">
             <x-picto name="artistes-ne-dark" set="logos" class="h-9 w-auto" />

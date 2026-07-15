@@ -51,7 +51,7 @@
                 <span aria-hidden="true">|</span>
                 <a href="{{ route('conditions') }}" class="underline underline-offset-2 hover:no-underline" wire:navigate>Conditions d'utilisation</a>
                 <span aria-hidden="true">|</span>
-                <a href="{{ route('conditions') }}#protection-des-donnees" class="underline underline-offset-2 hover:no-underline" wire:navigate>Protection des données</a>
+                <a href="{{ route('privacy') }}" class="underline underline-offset-2 hover:no-underline" wire:navigate>Protection des données</a>
                 <span aria-hidden="true">|</span>
                 <a href="{{ route('contact') }}" class="underline underline-offset-2 hover:no-underline" wire:navigate>Contact</a>
             </div>

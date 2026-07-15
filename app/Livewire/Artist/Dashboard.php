@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Artist;
 
+use App\Database\Models\User;
 use App\Enums\ArtistStatus;
-use App\Models\User;
 use App\Notifications\ProfileReactivatedNotification;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
@@ -22,11 +22,11 @@ class Dashboard extends Component
         abort_if($artist->isPublished(), 403);
 
         $artist->update([
-            'status' => ArtistStatus::Published,
+            'enum_status' => ArtistStatus::Published->value,
             'last_confirmed_at' => now(),
         ]);
 
-        $user->notify(new ProfileReactivatedNotification($artist->name));
+        $user->notify(new ProfileReactivatedNotification($artist->artist_name));
 
         session()->flash('status', 'Votre profil a été réactivé et est à nouveau visible dans l\'annuaire.');
     }

@@ -1,12 +1,11 @@
 <?php
 
+use App\Database\Models\Artist;
+use App\Database\Models\ArtistChangeRequest;
+use App\Database\Models\User;
 use App\Enums\ApprovalStatus;
 use App\Enums\ArtistStatus;
 use App\Enums\UserRole;
-use App\Models\Artist;
-use App\Models\ArtistChangeRequest;
-use App\Models\ArtistRegistrationRequest;
-use App\Models\User;
 
 it('casts user role enum and exposes helpers', function () {
     $admin = User::factory()->admin()->create();
@@ -35,17 +34,18 @@ it('scopes published artists', function () {
     expect(Artist::count())->toBe(5);
 });
 
-it('approves a registration request via the trait', function () {
+it('approves a change request via the trait', function () {
     $admin = User::factory()->admin()->create();
-    $request = ArtistRegistrationRequest::factory()->create();
+    $artist = Artist::factory()->create();
+    $change = ArtistChangeRequest::factory()->create(['artist_id' => $artist->id]);
 
-    $request->approve($admin, 'Bienvenue');
+    $change->approve($admin, 'Bienvenue');
 
-    expect($request->fresh())
+    expect($change->fresh())
         ->status->toBe(ApprovalStatus::Approved)
         ->reviewed_by->toBe($admin->id)
         ->review_notes->toBe('Bienvenue')
-        ->and($request->fresh()->reviewed_at)->not->toBeNull();
+        ->and($change->fresh()->reviewed_at)->not->toBeNull();
 });
 
 it('applies a change request payload to the artist', function () {
@@ -55,13 +55,12 @@ it('applies a change request payload to the artist', function () {
     $change = ArtistChangeRequest::factory()->create([
         'artist_id' => $artist->id,
         'submitted_by' => User::factory()->artist()->create()->id,
-        'payload' => ['biography' => '<p>New</p>', 'discipline' => 'Photographie'],
+        'payload' => ['biography' => '<p>New</p>'],
     ]);
 
     $change->apply();
 
     expect($artist->fresh())
         ->biography->toBe('<p>New</p>')
-        ->discipline->toBe('Photographie')
-        ->status->toBe(ArtistStatus::Published);
+        ->enum_status->toBe(ArtistStatus::Published);
 });

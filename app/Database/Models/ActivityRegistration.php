@@ -14,7 +14,7 @@ class ActivityRegistration extends Model
 
     protected $fillable = [
         'activity_id',
-        'registration_id'
+        'registration_id',
     ];
 
     /* * * * * * * * VALIDATION * * * * * * * */

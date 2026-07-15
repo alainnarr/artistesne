@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\OidcController;
 use App\Http\Controllers\Admin\RegistrationDocumentController;
+use App\Http\Controllers\Admin\StoragePermissionsMaintenanceController;
 use App\Http\Controllers\Artist\ConfirmationController;
 use App\Http\Controllers\Artist\MagicLinkController;
 use App\Livewire\Artist\Auth\RequestMagicLink;
@@ -15,58 +16,7 @@ use App\Livewire\Public\Contact;
 use App\Livewire\Public\Home;
 use App\Livewire\Public\RegisterArtist;
 use App\Livewire\Public\RequestModification;
-use Filament\Http\Middleware\Authenticate;
 use Illuminate\Support\Facades\Route;
-
-//TODO : Remove this test route when the repository service is fully integrated into the application.
-use App\Http\Controllers\RepositoryTestController;
-Route::prefix('test-upload')->name('test-upload.')->group(function () {
-    Route::get( '/', [RepositoryTestController::class, 'index'])->name('index');
-    Route::post('/', [RepositoryTestController::class, 'store'])->name('store');
-    Route::get( '/update', [RepositoryTestController::class, 'updateForm'])->name('updateForm');
-    Route::post('/update', [RepositoryTestController::class, 'update'])->name('update');
-});
-
-//TODO : Remove this test route when the links service is fully integrated into the application.
-use App\Http\Controllers\LinksTestController;
-Route::prefix('test-links')->name('test-links.')->group(function () {
-    Route::get(   '/', [LinksTestController::class, 'index'])->name('index');
-    Route::post(  '/', [LinksTestController::class, 'store'])->name('store');
-    Route::put(   '/', [LinksTestController::class, 'update'])->name('update');
-    Route::delete('/', [LinksTestController::class, 'destroy'])->name('delete');
-});
-
-//TODO : Remove this test route when the registrations service is fully integrated into the application.
-use App\Http\Controllers\RegistrationsTestController;
-Route::prefix('test-registration')->name('test-registration.')->group(function () {
-    Route::get( '/', [RegistrationsTestController::class, 'index'])->name('index');
-    Route::post('/', [RegistrationsTestController::class, 'store'])->name('store');
-    Route::post('/{registration}/status', [RegistrationsTestController::class, 'changeStatus'])->name('status');
-});
-
-//TODO : Remove this test route when the synonyms service is fully integrated into the application.
-use App\Http\Controllers\SynonymsTestController;
-Route::prefix('test-synonyms')->name('test-synonyms.')->group(function () {
-    Route::get(   '/', [SynonymsTestController::class, 'index'])->name('index');
-    Route::post(  '/', [SynonymsTestController::class, 'store'])->name('store');
-    Route::put(   '/', [SynonymsTestController::class, 'update'])->name('update');
-    Route::delete('/', [SynonymsTestController::class, 'destroy'])->name('delete');
-});
-
-// TODO : Remove this test route when the keywords service is fully integrated into the application.
-use App\Http\Controllers\KeywordsTestController;
-Route::prefix('test-keywords')->name('test-keywords.')->group(function () {
-    Route::get('/', [KeywordsTestController::class, 'index'])->name('index');
-    Route::post('/attach', [KeywordsTestController::class, 'attach'])->name('attach');
-    Route::post('/detach', [KeywordsTestController::class, 'detach'])->name('detach');
-});
-
-// TODO : Remove this test route when the keywords service is fully integrated into the application.
-use App\Http\Controllers\ArtistChangeRequestTestController;
-Route::prefix('test-changes')->name('test-changes.')->group(function () {
-    Route::get('/', [ArtistChangeRequestTestController::class, 'index'])->name('index');
-    Route::post('/', [ArtistChangeRequestTestController::class, 'store'])->name('store');
-});
 
 Route::get('/', Home::class)->name('home');
 
@@ -74,15 +24,22 @@ Route::view('/a-propos', 'about')->name('about');
 
 Route::view('/conditions', 'conditions')->name('conditions');
 
+Route::view('/protection-des-donnees', 'privacy')->name('privacy');
+
 Route::get('/contact', Contact::class)->name('contact');
 
 Route::get('/demande-de-modification', RequestModification::class)->name('modification.request');
 
-// Public artists listing page.
-Route::get('/artistes', ArtistsIndex::class)->name('public.artists.index');
-
-// Public artist profile page.
-Route::get('/artistes/{artist:slug}', PublicArtistShow::class)->name('public.artist.show');
+// Public artists listing + profile — gated by feature flag (disabled for V1).
+// Enable via ARTISTS_LISTING=true in .env when the new data model is populated.
+if (config('features.artists_listing', false)) {
+    Route::get('/artistes', ArtistsIndex::class)->name('public.artists.index');
+    Route::get('/artistes/{artist:slug}', PublicArtistShow::class)->name('public.artist.show');
+} else {
+    // Named routes must always exist so existing footer/nav links don't throw.
+    Route::get('/artistes', fn () => redirect()->route('home'))->name('public.artists.index');
+    Route::get('/artistes/{artist:slug}', fn () => redirect()->route('home'))->name('public.artist.show');
+}
 
 // Public artist registration request form.
 Route::get('/devenir-artiste', RegisterArtist::class)
@@ -119,10 +76,11 @@ if (app()->environment(['local', 'testing'])) {
 
 require __DIR__.'/settings.php';
 
-// Admin OIDC authentication (AD FS). No auth middleware — these initiate / receive the OIDC flow.
-Route::prefix('admin/auth')->name('admin.auth.')->group(function () {
+// Admin OIDC authentication (AD FS). The IP whitelist is checked first so the
+// login endpoints are also protected when APP_ADMIN_IP_WHITELIST is configured.
+Route::prefix('admin/auth')->name('admin.auth.')->middleware('admin.ip')->group(function () {
     Route::get('/redirect', [OidcController::class, 'redirect'])->name('redirect');
-    Route::get('/callback', [OidcController::class, 'callback'])->name('callback');
+    Route::match(['GET', 'POST'], '/callback', [OidcController::class, 'callback'])->name('callback');
 
     // Local-only shortcut to log in as an admin without a real AD FS instance.
     // The route only exists in the local environment — not registered at all elsewhere.
@@ -131,13 +89,21 @@ Route::prefix('admin/auth')->name('admin.auth.')->group(function () {
     }
 });
 
-// Admin file downloads (behind Filament's auth middleware).
-Route::middleware(['auth', Authenticate::class])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-        Route::get(
-            '/registration-requests/{artistRegistrationRequest}/documents/{index}',
-            RegistrationDocumentController::class,
-        )->name('registration-requests.documents.download');
-    });
+// Authenticated download of private registration documents (CV/portfolio) reviewed
+// by admins on the registration review page. Access is gated by auth + isAdmin()
+// in the controller since these files must never be reachable via a public/guessable URL.
+Route::middleware(['admin.ip', 'auth'])
+    ->get(
+        'admin/registrations/{registration}/documents/{repository}/download',
+        [RegistrationDocumentController::class, 'download']
+    )
+    ->name('admin.registrations.documents.download');
+
+// TEMPORARY (added 2026-07-14): one-off fix for a server-side permissions issue
+// where `shared/storage/app` is owned solely by www-data (mode 0700) and
+// neither deploy SSH account can create app/private or the app/public symlink.
+// Remove this route + StoragePermissionsMaintenanceController once ops fixes
+// ownership properly on vdn-typos1/vdn-typop1.
+Route::middleware(['admin.ip', 'auth'])
+    ->get('admin/maintenance/fix-storage-permissions', [StoragePermissionsMaintenanceController::class, 'fix'])
+    ->name('admin.maintenance.fix-storage-permissions');

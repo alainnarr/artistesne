@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Public;
 
+use App\Database\Models\User;
 use App\Enums\UserRole;
-use App\Models\User;
 use App\Notifications\ContactMessageNotification;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Notification;

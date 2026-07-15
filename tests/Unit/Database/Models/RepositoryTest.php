@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Database;
+namespace Tests\Unit\Database\Models;
 
 use App\Database\Models\Repository;
 use App\Enums\RepositoryDisk;
@@ -16,31 +16,31 @@ class RepositoryTest extends TestCase
 
     private function makeModel(): Repository
     {
-        return new Repository();
+        return new Repository;
     }
 
-    public function testGetTableReturnsTableName(): void
+    public function test_get_table_returns_table_name(): void
     {
         $model = $this->makeModel();
 
         $this->assertEquals('repositories', $model->getTable());
     }
 
-    public function testGetFillableReturnsArray(): void
+    public function test_get_fillable_returns_array(): void
     {
         $model = $this->makeModel();
 
-        $this->assertEquals(['name', 'file_type', 'size', 'enum_disk', 'path', ], $model->getFillable());
+        $this->assertEquals(['name', 'file_type', 'size', 'enum_disk', 'path'], $model->getFillable());
     }
 
-    public function testGetUpdatableReturnsArray(): void
+    public function test_get_updatable_returns_array(): void
     {
         $model = $this->makeModel();
 
-        $this->assertEquals(['name', 'file_type', 'size', 'enum_disk', 'path', ], $model->getUpdatable());
+        $this->assertEquals(['name', 'file_type', 'size', 'enum_disk', 'path'], $model->getUpdatable());
     }
 
-    public function testCastsEnumDiskToRepositoryDisk(): void
+    public function test_casts_enum_disk_to_repository_disk(): void
     {
         $model = $this->makeModel();
         $casts = $model->getCasts();
@@ -49,7 +49,7 @@ class RepositoryTest extends TestCase
         $this->assertEquals(RepositoryDisk::class, $casts['enum_disk']);
     }
 
-    public function testGetRulesReturnsAllRules(): void
+    public function test_get_rules_returns_all_rules(): void
     {
         $rules = Repository::getRules();
 
@@ -60,7 +60,7 @@ class RepositoryTest extends TestCase
         $this->assertArrayHasKey('path', $rules);
     }
 
-    public function testEnumDiskRuleUsesRepositoryDiskEnum(): void
+    public function test_enum_disk_rule_uses_repository_disk_enum(): void
     {
         $rules = Repository::getRules();
 
@@ -68,9 +68,9 @@ class RepositoryTest extends TestCase
         $this->assertInstanceOf(Enum::class, $rules['enum_disk'][1]);
     }
 
-    public function testGetRulesReturnsOnlyRequestedFields(): void
+    public function test_get_rules_returns_only_requested_fields(): void
     {
-        $rules = Repository::getRules(['name', 'path',]);
+        $rules = Repository::getRules(['name', 'path']);
 
         $this->assertCount(2, $rules);
         $this->assertArrayHasKey('name', $rules);
@@ -78,7 +78,7 @@ class RepositoryTest extends TestCase
         $this->assertArrayNotHasKey('size', $rules);
     }
 
-    public function testEnumDiskAttributeReturnsEnumInstance(): void
+    public function test_enum_disk_attribute_returns_enum_instance(): void
     {
         $model = $this->makeModel();
         $model->enum_disk = RepositoryDisk::PUBLIC->value;
@@ -87,16 +87,17 @@ class RepositoryTest extends TestCase
         $this->assertEquals(RepositoryDisk::PUBLIC, $model->enum_disk);
     }
 
-    public function testFileAccessorReturnsStorageUrl(): void
+    public function test_file_accessor_returns_storage_url(): void
     {
         Storage::fake('public');
         $model = $this->makeModel();
+        $model->enum_disk = RepositoryDisk::PUBLIC;
         $model->path = 'repositories/test/file.jpg';
 
-        $this->assertEquals(Storage::url('repositories/test/file.jpg'), $model->file);
+        $this->assertEquals(Storage::disk('public')->url('repositories/test/file.jpg'), $model->file);
     }
 
-    public function testHasFileReturnsTrueWhenFileExists(): void
+    public function test_has_file_returns_true_when_file_exists(): void
     {
         Storage::fake('public');
         Storage::disk('public')->put('repositories/test/file.jpg', 'content');
@@ -108,7 +109,7 @@ class RepositoryTest extends TestCase
         $this->assertTrue($model->has_file);
     }
 
-    public function testHasFileReturnsFalseWhenFileDoesNotExist(): void
+    public function test_has_file_returns_false_when_file_does_not_exist(): void
     {
         Storage::fake('public');
         $model = $this->makeModel();
@@ -118,7 +119,7 @@ class RepositoryTest extends TestCase
         $this->assertFalse($model->has_file);
     }
 
-    public function testRepositoryableRelation(): void
+    public function test_repositoryable_relation(): void
     {
         $model = $this->makeModel();
         $relation = $model->repositoryable();

@@ -2,8 +2,9 @@
 
 namespace App\Livewire\Public;
 
-use App\Models\Artist;
-use App\Models\TaxonomyTerm;
+use App\Database\Models\Activity;
+use App\Database\Models\Artist;
+use App\Database\Models\Discipline;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Computed;
@@ -123,46 +124,31 @@ class ArtistsIndex extends Component
 
         $groups = [];
 
-        $keywords = TaxonomyTerm::query()
-            ->where('type', 'keywords')
-            ->where('name', 'like', "%{$q}%")
-            ->orderBy('name')
-            ->take(5)
-            ->pluck('name')
-            ->all();
-        if (! empty($keywords)) {
-            $groups['Mots-clés'] = $keywords;
-        }
-
-        $domains = TaxonomyTerm::query()
-            ->where('type', 'domain')
-            ->where('name', 'like', "%{$q}%")
-            ->orderBy('position')
+        $domains = Discipline::where('label', 'like', "%{$q}%")
+            ->orderBy('label')
             ->take(3)
-            ->pluck('name')
+            ->pluck('label')
             ->all();
         if (! empty($domains)) {
             $groups['Domaines'] = $domains;
         }
 
-        $activities = TaxonomyTerm::query()
-            ->where('type', 'main_activities')
-            ->where('name', 'like', "%{$q}%")
+        $activities = Activity::where('label', 'like', "%{$q}%")
             ->distinct()
-            ->orderBy('name')
+            ->orderBy('label')
             ->take(5)
-            ->pluck('name')
+            ->pluck('label')
             ->all();
         if (! empty($activities)) {
             $groups['Activités'] = $activities;
         }
 
         $artists = Artist::search($q)
-            ->options(['attributesToSearchOn' => ['name']])
-            ->query(fn ($query) => $query->select('id', 'name'))
+            ->options(['attributesToSearchOn' => ['artist_name']])
+            ->query(fn ($query) => $query->select('id', 'artist_name'))
             ->take(5)
             ->get()
-            ->pluck('name')
+            ->pluck('artist_name')
             ->all();
         if (! empty($artists)) {
             $groups['Artistes'] = $artists;
@@ -184,11 +170,6 @@ class ArtistsIndex extends Component
 
     // ── Render ────────────────────────────────────────────────────────────────
 
-    /**
-     * Published artists matching the current search and every active filter
-     * EXCEPT the one named in $except — used both for the result set and to
-     * compute facet options that would still return at least one result.
-     */
     private function baseQuery(?string $except = null): Builder
     {
         if ($this->search !== '') {
@@ -199,26 +180,24 @@ class ArtistsIndex extends Component
         }
 
         if ($except !== 'domain' && $this->filterDomain !== '') {
-            $query->where('discipline', $this->filterDomain);
+            $query->where('discipline_main_id', (int) $this->filterDomain);
         }
         if ($except !== 'secondaryDomain' && $this->filterSecondaryDomain !== '') {
-            $query->where('secondary_discipline', $this->filterSecondaryDomain);
+            $query->where('discipline_secondary', (int) $this->filterSecondaryDomain);
         }
         if ($except !== 'locality' && $this->filterLocality !== '') {
             $query->where('city', $this->filterLocality);
         }
         if ($except !== 'activities' && $this->filterActivities !== []) {
-            $query->where(function ($inner) {
-                foreach ($this->filterActivities as $activity) {
-                    $inner->orWhereJsonContains('activities', $activity);
-                }
+            $activityIds = array_map('intval', $this->filterActivities);
+            $query->whereHas('registration', function ($q) use ($activityIds) {
+                $q->whereHas('activities', fn ($inner) => $inner->whereIn('activities.id', $activityIds));
             });
         }
         if ($except !== 'secondaryActivities' && $this->filterSecondaryActivities !== []) {
-            $query->where(function ($inner) {
-                foreach ($this->filterSecondaryActivities as $activity) {
-                    $inner->orWhereJsonContains('secondary_activities', $activity);
-                }
+            $activityIds = array_map('intval', $this->filterSecondaryActivities);
+            $query->whereHas('registration', function ($q) use ($activityIds) {
+                $q->whereHas('activities', fn ($inner) => $inner->whereIn('activities.id', $activityIds));
             });
         }
 
@@ -227,13 +206,13 @@ class ArtistsIndex extends Component
 
     public function render(): View
     {
-        $query = $this->baseQuery();
+        $query = $this->baseQuery()->with(['disciplineMain', 'disciplineSecondary', 'registration.activities']);
 
         $query = match ($this->sort) {
-            'recent' => $query->orderByDesc('published_at')->orderByDesc('id'),
-            'z-name' => $query->orderByDesc('name'),
-            'relevance' => $query,  // Scout already ordered by score when IDs resolved above
-            default => $query->orderBy('name'),
+            'recent' => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'z-name' => $query->orderByDesc('artist_name'),
+            'relevance' => $query,
+            default => $query->orderBy('artist_name'),
         };
 
         $artists = $query->paginate(12);
@@ -241,12 +220,10 @@ class ArtistsIndex extends Component
         return view('livewire.public.artists-index', [
             'artists' => $artists,
             'total' => $artists->total(),
-            'domains' => $this->presentColumnOptions('domain', 'discipline'),
-            'secondaryDomains' => $this->presentColumnOptions('secondaryDomain', 'secondary_discipline'),
-            // Main activities are only meaningful once a primary domain is selected
-            // (see <x-ds.filter-modal>, which shows a placeholder message otherwise).
-            'availableActivities' => $this->filterDomain !== '' ? $this->presentJsonValues('activities') : [],
-            'availableSecondaryActivities' => $this->presentJsonValues('secondaryActivities', 'secondary_activities'),
+            'domains' => $this->domainFacetOptions('domain'),
+            'secondaryDomains' => $this->secondaryDomainFacetOptions('secondaryDomain'),
+            'availableActivities' => $this->filterDomain !== '' ? $this->activityFacetOptions() : [],
+            'availableSecondaryActivities' => $this->activityFacetOptions(),
             'localityGroups' => $this->localityGroups(),
             'filterCount' => $this->filterCount(),
             'suggestions' => $this->suggestions(),
@@ -255,39 +232,58 @@ class ArtistsIndex extends Component
     }
 
     /**
-     * Distinct non-empty values of a column across artists matching every
-     * filter except this facet, as a [value => value] map.
+     * Domain options for the filter modal: [id => label].
      *
      * @return array<string, string>
      */
-    private function presentColumnOptions(string $facet, string $column): array
+    private function domainFacetOptions(string $facet): array
     {
-        return $this->baseQuery($facet)
-            ->whereNotNull($column)
-            ->where($column, '!=', '')
+        $ids = $this->baseQuery($facet)
+            ->whereNotNull('discipline_main_id')
             ->distinct()
-            ->orderBy($column)
-            ->pluck($column)
-            ->mapWithKeys(fn (string $value) => [$value => $value])
+            ->pluck('discipline_main_id');
+
+        return Discipline::whereIn('id', $ids)
+            ->orderBy('label')
+            ->pluck('label', 'id')
+            ->mapWithKeys(fn ($label, $id) => [(string) $id => $label])
             ->all();
     }
 
     /**
-     * Distinct values present in a JSON array column across artists matching
-     * every filter except this facet.
+     * Secondary domain options for the filter modal: [id => label].
      *
-     * @return array<int, string>
+     * @return array<string, string>
      */
-    private function presentJsonValues(string $facet, ?string $column = null): array
+    private function secondaryDomainFacetOptions(string $facet): array
     {
-        $column ??= $facet;
+        $ids = $this->baseQuery($facet)
+            ->whereNotNull('discipline_secondary')
+            ->distinct()
+            ->pluck('discipline_secondary');
 
-        return $this->baseQuery($facet)
-            ->get([$column])
-            ->flatMap(fn (Artist $artist) => $artist->{$column} ?? [])
-            ->unique()
-            ->sort()
-            ->values()
+        return Discipline::whereIn('id', $ids)
+            ->orderBy('label')
+            ->pluck('label', 'id')
+            ->mapWithKeys(fn ($label, $id) => [(string) $id => $label])
+            ->all();
+    }
+
+    /**
+     * Activity options for the selected domain: [id => label].
+     *
+     * @return array<string, string>
+     */
+    private function activityFacetOptions(): array
+    {
+        if (blank($this->filterDomain)) {
+            return [];
+        }
+
+        return Activity::where('discipline_id', (int) $this->filterDomain)
+            ->orderBy('label')
+            ->pluck('label', 'id')
+            ->mapWithKeys(fn ($label, $id) => [(string) $id => $label])
             ->all();
     }
 
@@ -306,7 +302,6 @@ class ArtistsIndex extends Component
             ->orderBy('city')
             ->pluck('city')
             ->all();
-
         $regionGroups = collect(config('localities.groups', []))->except('Autre');
         $cantonCommunes = $regionGroups->flatten()->all();
 

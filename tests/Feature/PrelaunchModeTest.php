@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Route;
+
 // Helpers shared across all describe blocks.
 function withWhitelistedIp(): void
 {
@@ -51,6 +53,9 @@ describe('PrelaunchMode — v1', function (): void {
     beforeEach(function (): void {
         config(['app.prelaunch_mode' => 'v1']);
         withNoWhitelist();
+
+        Route::any('/livewire/update', fn () => response('ok'));
+        Route::any('/livewire-abc123/update', fn () => response('ok'));
     });
 
     it('returns 503 on the homepage for non-whitelisted clients', function (): void {
@@ -67,6 +72,24 @@ describe('PrelaunchMode — v1', function (): void {
 
     it('allows the artist portal login for everyone', function (): void {
         $this->get('/artiste/connexion')->assertOk();
+    });
+
+    it('allows classic livewire update endpoints for everyone', function (): void {
+        $this->post('/livewire/update')->assertOk();
+    });
+
+    it('allows hashed livewire update endpoints for everyone', function (): void {
+        $this->post('/livewire-abc123/update')->assertOk();
+    });
+
+    it('allows logout for everyone', function (): void {
+        Route::post('/logout', fn () => response('ok'))->name('logout.test-stub');
+        $this->post('/logout')->assertOk();
+    });
+
+    it('allows filament core routes (e.g. signed export download links) for everyone', function (): void {
+        Route::get('/filament/test-stub', fn () => response('ok'));
+        $this->get('/filament/test-stub')->assertOk();
     });
 
     it('always passes the health endpoint', function (): void {

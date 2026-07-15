@@ -1,12 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Widgets;
 
+use App\Database\Models\Artist;
+use App\Database\Models\ArtistChangeRequest;
+use App\Database\Models\Registration;
 use App\Enums\ApprovalStatus;
 use App\Enums\ArtistStatus;
-use App\Models\Artist;
-use App\Models\ArtistChangeRequest;
-use App\Models\ArtistRegistrationRequest;
+use App\Enums\RegistrationStatus;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -17,16 +20,16 @@ class InventoryStatsOverview extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $pendingRegistrations = ArtistRegistrationRequest::query()
-            ->where('status', ApprovalStatus::Pending)
+        $pendingRegistrations = Registration::query()
+            ->whereIn('enum_status', [RegistrationStatus::OPEN->value, RegistrationStatus::PENDING->value])
             ->count();
 
         $pendingChanges = ArtistChangeRequest::query()
-            ->where('status', ApprovalStatus::Pending)
+            ->where('status', ApprovalStatus::Pending->value)
             ->count();
 
         $publishedArtists = Artist::query()
-            ->where('status', ArtistStatus::Published)
+            ->where('enum_status', ArtistStatus::Published->value)
             ->count();
 
         $totalArtists = Artist::query()->count();
@@ -36,7 +39,7 @@ class InventoryStatsOverview extends StatsOverviewWidget
                 ->description($pendingRegistrations > 0 ? 'À examiner' : 'Aucune en attente')
                 ->descriptionIcon(Heroicon::OutlinedInbox)
                 ->color($pendingRegistrations > 0 ? 'warning' : 'success')
-                ->url(route('filament.admin.resources.artist-registration-requests.index')),
+                ->url(route('filament.admin.resources.registrations.index')),
 
             Stat::make('Modifications en attente', $pendingChanges)
                 ->description($pendingChanges > 0 ? 'À examiner' : 'Aucune en attente')

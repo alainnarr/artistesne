@@ -17,6 +17,15 @@
         <div class="mx-auto w-full max-w-[928px] bg-brand-paper p-6 sm:p-12 lg:p-16">
             <div class="flex flex-col gap-12 sm:gap-14">
 
+                @if (session('error'))
+                    <div class="flex items-start gap-4 border-l-4 border-red-500 bg-red-50 p-5">
+                        <div>
+                            <h2 class="font-serif text-lg font-bold text-brand">Lien de connexion invalide</h2>
+                            <p class="mt-1 text-base text-brand-muted">{{ session('error') }}</p>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Section 1 — Référencement --}}
                 <section class="flex flex-col gap-6 sm:gap-8">
                     <h2 class="font-serif text-3xl font-bold text-brand sm:text-4xl">Référencement</h2>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AdminIpWhitelist;
 use App\Http\Middleware\EnsureUserIsArtist;
 use App\Http\Middleware\PrelaunchMode;
 use Illuminate\Foundation\Application;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'artist' => EnsureUserIsArtist::class,
+            'admin.ip' => AdminIpWhitelist::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

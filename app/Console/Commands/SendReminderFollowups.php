@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Database\Models\Artist;
 use App\Enums\ArtistStatus;
-use App\Models\Artist;
 use App\Notifications\SemiannualReminderFollowupNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\URL;
@@ -18,7 +18,7 @@ class SendReminderFollowups extends Command
     {
         // Artists who received initial reminder 21+ days ago but haven't confirmed.
         $artists = Artist::query()
-            ->where('status', ArtistStatus::Published)
+            ->where('enum_status', ArtistStatus::Published->value)
             ->whereNotNull('reminder_sent_at')
             ->where('reminder_sent_at', '<', now()->subDays(21))
             ->whereNull('last_confirmed_at')
@@ -34,7 +34,7 @@ class SendReminderFollowups extends Command
         $this->info("Sending followups to {$artists->count()} artist(s).");
 
         if ($this->option('dry-run')) {
-            $artists->each(fn ($a) => $this->line("  - {$a->name} ({$a->email})"));
+            $artists->each(fn ($a) => $this->line("  - {$a->artist_name} ({$a->email})"));
 
             return self::SUCCESS;
         }

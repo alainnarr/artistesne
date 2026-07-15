@@ -7,37 +7,37 @@ use PHPUnit\Framework\TestCase;
 
 class ArtistStatusTest extends TestCase
 {
-    public function testDraftLabel(): void
+    public function test_draft_label(): void
     {
         $this->assertEquals('Brouillon', ArtistStatus::Draft->label());
     }
 
-    public function testPublishedLabel(): void
+    public function test_published_label(): void
     {
         $this->assertEquals('Publié', ArtistStatus::Published->label());
     }
 
-    public function testDraftColor(): void
+    public function test_draft_color(): void
     {
         $this->assertEquals('gray', ArtistStatus::Draft->color());
     }
 
-    public function testPublishedColor(): void
+    public function test_published_color(): void
     {
         $this->assertEquals('success', ArtistStatus::Published->color());
     }
 
-    public function testDraftValue(): void
+    public function test_draft_value(): void
     {
         $this->assertEquals('draft', ArtistStatus::Draft->value);
     }
 
-    public function testPublishedValue(): void
+    public function test_published_value(): void
     {
         $this->assertEquals('published', ArtistStatus::Published->value);
     }
 
-    public function testFromDraftValue(): void
+    public function test_from_draft_value(): void
     {
         $this->assertEquals(
             ArtistStatus::Draft,
@@ -45,7 +45,7 @@ class ArtistStatusTest extends TestCase
         );
     }
 
-    public function testFromPublishedValue(): void
+    public function test_from_published_value(): void
     {
         $this->assertEquals(
             ArtistStatus::Published,
@@ -53,7 +53,7 @@ class ArtistStatusTest extends TestCase
         );
     }
 
-    public function testTryFromReturnsNullForInvalidValue(): void
+    public function test_try_from_returns_null_for_invalid_value(): void
     {
         $this->assertNull(ArtistStatus::tryFrom('invalid'));
     }

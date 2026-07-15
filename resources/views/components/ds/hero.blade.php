@@ -3,7 +3,8 @@
 
     Inspiré du hero Home (Figma 561:49042) :
         - Titre serif (Lora Bold)
-        - Accent italique teal (Lora SemiBold Italic)
+        - Accent italique teal (Lora SemiBold Italic) — affiché en ligne
+          après le titre (ex: "Demande de référencement" sur une seule ligne)
         - Paragraphe d'introduction
         - Slot optionnel pour un panneau d'action attaché en bas
           (barre de recherche sombre, CTA, etc.)
@@ -16,7 +17,7 @@
     Props :
         $title       : titre principal (string)
         $accent      : fragment italique teal (string|null) — affiché
-                       sous le titre, sur sa propre ligne
+                       inline, immédiatement après le titre sur la même ligne
         $lead        : paragraphe d'intro (string|null)
         $leadSlot    : slot 'lead' — utiliser si le paragraphe nécessite
                        du HTML (spans, balises)
@@ -41,8 +42,8 @@
         : 'font-serif text-3xl font-bold leading-tight text-brand sm:text-4xl';
 
     $accentClass = $isHome
-        ? 'font-serif text-4xl font-semibold italic leading-tight text-brand-teal sm:text-5xl'
-        : 'font-serif text-3xl font-semibold italic leading-tight text-brand-teal sm:text-4xl';
+        ? 'font-semibold italic text-brand-teal'
+        : 'font-semibold italic text-brand-teal';
 
     $leadClass = $isHome
         ? 'max-w-2xl text-lg leading-relaxed text-brand sm:text-2xl'
@@ -50,20 +51,25 @@
 
     $hasAction = isset($action) ? trim($action) !== '' : false;
     $hasLeadSlot = isset($leadSlot) ? trim($leadSlot) !== '' : false;
+
+    // Build the heading HTML with title + accent inline on the same line.
+    $headingHtml = '';
+    if ($title) {
+        $headingHtml .= e($title);
+    }
+    if ($title && $accent) {
+        $headingHtml .= ' ';
+    }
+    if ($accent) {
+        $headingHtml .= '<span class="' . e($accentClass) . '">' . e($accent) . '</span>';
+    }
 @endphp
 
 <div {{ $attributes->class(['ds-hero flex w-full flex-col items-center gap-10']) }}>
     {{-- Bloc texte --}}
     <div class="flex w-full flex-col gap-6 px-0 sm:px-10">
         @if ($title || $accent)
-            <div class="flex flex-col gap-1">
-                @if ($title)
-                    <h1 class="{{ $titleClass }}">{{ $title }}</h1>
-                @endif
-                @if ($accent)
-                    <p class="{{ $accentClass }}">{{ $accent }}</p>
-                @endif
-            </div>
+            <h1 class="{{ $titleClass }}">{!! $headingHtml !!}</h1>
         @endif
 
         @if ($hasLeadSlot)

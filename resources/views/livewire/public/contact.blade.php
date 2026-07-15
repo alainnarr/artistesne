@@ -3,7 +3,8 @@
     <x-ds.section variant="paper">
         <x-ds.hero
             variant="page"
-            title="Nous contacter"
+            title="Nous"
+            accent="contacter"
             lead="Vous pouvez utiliser le formulaire ci-dessous pour prendre contact avec les administrateurs du site internet www.artistes.ne.ch."
         />
     </x-ds.section>
@@ -55,7 +56,7 @@
 
                         <p class="text-xs font-light text-brand-muted">
                             Les données collectées sont utilisées par le service de la culture uniquement pour traiter votre demande.
-                            <a href="{{ route('about') }}" class="underline underline-offset-2 hover:no-underline">En savoir plus sur la protection des données</a>.
+                        <a href="{{ route('privacy') }}" wire:navigate class="underline underline-offset-2 hover:no-underline">En savoir plus sur la protection des données</a>.
                         </p>
 
                         <div class="flex justify-center">

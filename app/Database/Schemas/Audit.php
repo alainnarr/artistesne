@@ -2,10 +2,14 @@
 
 namespace App\Database\Schemas;
 
-use InvalidArgumentException;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\ColumnDefinition;
+use Illuminate\Database\Schema\ForeignIdColumnDefinition;
+use Illuminate\Database\Schema\ForeignKeyDefinition;
+use Illuminate\Database\Schema\IndexDefinition;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class Audit extends Blueprint
 {
@@ -16,7 +20,7 @@ class Audit extends Blueprint
             return new Audit($table, $callback);
         });
 
-        $schema->create('_' . $tableName, function ($table) use ($tableColumns) {
+        $schema->create('_'.$tableName, function ($table) use ($tableColumns) {
             $table->bigIncrements('_id');
             $tableColumns($table);
             $hasDeletedAt = false;
@@ -26,10 +30,10 @@ class Audit extends Blueprint
                     $hasDeletedAt = true;
                 }
             }
-            
+
             Table::defaultColumns($table);
 
-            if (!$hasDeletedAt) {
+            if (! $hasDeletedAt) {
                 $table->softDeletes();
                 $table->unsignedBigInteger('deleted_by')->nullable(); // User id
             }
@@ -41,17 +45,18 @@ class Audit extends Blueprint
         if ($column === '_id') {
             return parent::bigIncrements($column);
         }
+
         return parent::unsignedBigInteger($column);
     }
 
     public function unique($columns, $name = null, $algorithm = null)
     {
-         return null;
+        return new IndexDefinition([]);
     }
 
     public function foreignId($column)
     {
-        return parent::unsignedBigInteger($column);
+        return parent::foreignId($column);
     }
 
     public function id($column = 'id')
@@ -61,22 +66,26 @@ class Audit extends Blueprint
 
     public function foreignUlid($column, $length = 26)
     {
-        return parent::ulid($column, $length);
+        return parent::foreignUlid($column, $length);
     }
 
-    public function foreignIdFor($model, $column = null)
+    public function foreignIdFor($model, $column = null): ForeignIdColumnDefinition
     {
-         return null;
+        if (! ($model instanceof Model) && ! (is_string($model) && is_subclass_of($model, Model::class))) {
+            throw new InvalidArgumentException('foreignIdFor expects an Eloquent Model class or instance.');
+        }
+
+        return parent::foreignIdFor($model, $column);
     }
 
     public function foreignUuid($column)
     {
-        return parent::uuid($column);
+        return parent::foreignUuid($column);
     }
 
     public function foreign($columns, $name = null)
     {
-         return null;
+        return new ForeignKeyDefinition([]);
     }
 
     public function foreignKey(
@@ -104,17 +113,18 @@ class Audit extends Blueprint
                 $parameters['length'] = $length ?? 100;
                 break;
             default:
-                throw new InvalidArgumentException("Type: " . $type . " not accepted for foreign key");
+                throw new InvalidArgumentException('Type: '.$type.' not accepted for foreign key');
         }
 
         $foreignKey = $this->addColumn($type, $column, $parameters);
+
         return $foreignKey;
     }
 
     public function enumeration(string $column, string $type, $parameters = []): ColumnDefinition
     {
         switch ($type) {
-            case 'integer':
+            case 'int':
                 $parameters['type'] = 'integer';
                 $parameters['unsigned'] = true;
                 $parameters['autoIncrement'] = false;
@@ -130,7 +140,7 @@ class Audit extends Blueprint
                 break;
             default:
                 throw new InvalidArgumentException(
-                    "Type: " . $type . " not accepted for enumeration. Only accepts int, boolean, string"
+                    'Type: '.$type.' not accepted for enumeration. Only accepts int, boolean, string'
                 );
         }
 

@@ -2,18 +2,18 @@
 
 namespace Tests\Unit\Database\Traits;
 
+use App\Database\Model;
 use App\Database\Schemas\Audit;
 use App\Database\Schemas\Table;
 use App\Database\Traits\Auditable;
 use Carbon\CarbonInterface;
-use App\Database\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
-use Illuminate\Http\Request;
 
 class AuditableTest extends TestCase
 {
@@ -54,38 +54,45 @@ class AuditableTest extends TestCase
 
     protected function getModel()
     {
-        return new class extends Model {
+        return new class extends Model
+        {
             use Auditable;
             use SoftDeletes;
 
             protected $table = 'transactable_test';
+
             protected $guarded = [];
+
             public $timestamps = true;
+
             public $dates = ['deleted_at'];
         };
     }
 
     protected function getModelAuditable()
     {
-        return new class extends Model {
-            use SoftDeletes;
+        return new class extends Model
+        {
             use Auditable;
+            use SoftDeletes;
 
             protected $table = 'auditable';
+
             protected $auditable = '_auditable';
         };
     }
 
     protected function getModelNotAuditable()
     {
-        return new class extends Model {
+        return new class extends Model
+        {
             use Auditable;
 
             protected $table = 'notauditable';
         };
     }
 
-    public function testReturnsCustomAuditableTable()
+    public function test_returns_custom_auditable_table()
     {
         $model = $this->getModelAuditable();
 
@@ -93,7 +100,7 @@ class AuditableTest extends TestCase
         $this->assertEquals('_auditable', $auditable);
     }
 
-    public function testReturnsPrefixedTableWhenExists()
+    public function test_returns_prefixed_table_when_exists()
     {
         $model = $this->getModelAuditable();
         $table = $model->getAuditable();
@@ -101,7 +108,7 @@ class AuditableTest extends TestCase
         $this->assertEquals('_auditable', $table);
     }
 
-    public function testReturnsDefaultAuditsWhenNoTableFound()
+    public function test_returns_default_audits_when_no_table_found()
     {
         $model = $this->getModelNotAuditable();
 
@@ -109,11 +116,12 @@ class AuditableTest extends TestCase
         $this->assertEquals('audits', $table);
     }
 
-    public function testReturnsCustomAuditableTableNotExplicitlySet()
+    public function test_returns_custom_auditable_table_not_explicitly_set()
     {
-        $model = new class extends Model {
-            use SoftDeletes;
+        $model = new class extends Model
+        {
             use Auditable;
+            use SoftDeletes;
 
             protected $table = 'auditable';
         };
@@ -122,7 +130,7 @@ class AuditableTest extends TestCase
         $this->assertEquals('_auditable', $table);
     }
 
-    public function testStoreAuditableInsertsIntoCustomTable()
+    public function test_store_auditable_inserts_into_custom_table()
     {
         $model = $this->getModelAuditable();
         $model->name = 'Name';
@@ -138,7 +146,7 @@ class AuditableTest extends TestCase
         $this->assertEquals('C', $audit->audit_action);
     }
 
-    public function testStoreAuditableInsertsIntoAuditsTable()
+    public function test_store_auditable_inserts_into_audits_table()
     {
         $model = $this->getModelNotAuditable();
         $model->name = 'Name';
@@ -155,7 +163,7 @@ class AuditableTest extends TestCase
         $this->assertEquals('C', $audit->audit_action);
     }
 
-    public function testStoreAuditableDeleteIntoCustomTable()
+    public function test_store_auditable_delete_into_custom_table()
     {
         $model = $this->getModelAuditable();
         $model->name = 'Name';
@@ -164,14 +172,14 @@ class AuditableTest extends TestCase
 
         $audit = DB::table('_auditable')->first();
         $audits = DB::table('_auditable')->get();
-        //dd('Model', $model, 'Audit', $audit, 'Audits', $audits);
+        // dd('Model', $model, 'Audit', $audit, 'Audits', $audits);
 
         $this->assertNotNull($audit);
         $this->assertEquals($model->id, $audit->id);
         $this->assertEquals('C', $audit->audit_action);
     }
 
-    public function testStoreAuditableHarddeleteIntoCustomTable()
+    public function test_store_auditable_harddelete_into_custom_table()
     {
         $model = $this->getModelAuditable();
         $model->name = 'Name';
@@ -185,7 +193,7 @@ class AuditableTest extends TestCase
         $this->assertEquals('D', $audit->audit_action);
     }
 
-    public function testStoreAuditableDeleteIntoAuditsTable()
+    public function test_store_auditable_delete_into_audits_table()
     {
         $model = $this->getModelNotAuditable();
         $model->name = 'Name';
@@ -201,7 +209,7 @@ class AuditableTest extends TestCase
         $this->assertEquals('C', $audit->audit_action);
     }
 
-    public function testStoreAuditableHarddeleteIntoAuditsTable()
+    public function test_store_auditable_harddelete_into_audits_table()
     {
         $model = $this->getModelNotAuditable();
         $model->name = 'Name';
@@ -220,10 +228,11 @@ class AuditableTest extends TestCase
         $ref = new \ReflectionClass($class);
         $method = $ref->getMethod($methodName);
         $method->setAccessible(true);
+
         return $method->invokeArgs(null, $parameters);
     }
 
-    public function testCreatingFillsTransactionColumns(): void
+    public function test_creating_fills_transaction_columns(): void
     {
         $model = $this->getModel()->create(['name' => 'Test Create']);
 
@@ -234,7 +243,7 @@ class AuditableTest extends TestCase
         $this->assertNull($model->updated_by);
     }
 
-    public function testUpdatingFillsTransactionColumns(): void
+    public function test_updating_fills_transaction_columns(): void
     {
         $model = $this->getModel()->create(['name' => 'Initial']);
         $model->name = 'Updated Name';
@@ -245,7 +254,7 @@ class AuditableTest extends TestCase
         $this->assertInstanceOf(CarbonInterface::class, $model->updated_at);
     }
 
-    public function testDeletingSetsAuditColumns(): void
+    public function test_deleting_sets_audit_columns(): void
     {
         $model = $this->getModel()->create(['name' => 'To Delete']);
         $model->delete();
@@ -256,7 +265,7 @@ class AuditableTest extends TestCase
         $this->assertEquals(null, $fresh->deleted_by);
     }
 
-    public function testRestoringSetsAuditColumns(): void
+    public function test_restoring_sets_audit_columns(): void
     {
         $model = $this->getModel()->create(['name' => 'To Restore']);
         $model->delete();
@@ -270,7 +279,7 @@ class AuditableTest extends TestCase
         $this->assertEquals(null, $fresh->updated_by);
     }
 
-    public function testForceDeleteDoesNotModifyAuditColumns(): void
+    public function test_force_delete_does_not_modify_audit_columns(): void
     {
         $model = $this->getModel()->create(['name' => 'Force Delete']);
         $model->forceDelete();
@@ -278,7 +287,7 @@ class AuditableTest extends TestCase
         $this->assertNull($this->getModel()->withTrashed()->find($model->id));
     }
 
-    public function testUpdatingWithDeleteOrRestoreActionSkipsUpdating(): void
+    public function test_updating_with_delete_or_restore_action_skips_updating(): void
     {
         $model = $this->getModel()->create(['name' => 'Skip Update']);
         $model->audit_action = 'D';
@@ -288,7 +297,7 @@ class AuditableTest extends TestCase
         $this->assertEquals('D', $model->audit_action);
     }
 
-    public function testTransactionColumnsMethod(): void
+    public function test_transaction_columns_method(): void
     {
         $columns = $this->getModel()::transactionColumns();
         $this->assertContains('created_at', $columns);
@@ -296,7 +305,7 @@ class AuditableTest extends TestCase
         $this->assertContains('audit_action', $columns);
     }
 
-    public function testTransactionColumnsAttributesAllCases(): void
+    public function test_transaction_columns_attributes_all_cases(): void
     {
         $model = $this->getModel();
 
@@ -322,7 +331,7 @@ class AuditableTest extends TestCase
         $this->assertNull($restore['deleted_by']);
     }
 
-    public function testGetters(): void
+    public function test_getters(): void
     {
         $model = $this->getModel();
         $this->assertEquals(null, $model::getUser());
@@ -331,22 +340,23 @@ class AuditableTest extends TestCase
         $this->assertFalse($model::substringInArray('fail', ['this is a test']));
     }
 
-    public function testGetIpReturnsIpFromRequest(): void
+    public function test_get_ip_returns_ip_from_request(): void
     {
         $model = $this->getModel();
 
         $request = Request::create('/', 'GET', [], [], [], [
-            'REMOTE_ADDR' => '123.123.123.123'
+            'REMOTE_ADDR' => '123.123.123.123',
         ]);
         $this->app->instance(Request::class, $request);
 
         $this->assertEquals('123.123.123.123', $model::getIp());
     }
 
-    public function testGetIpReturnsNoIpOnException(): void
+    public function test_get_ip_returns_no_ip_on_exception(): void
     {
         $model = $this->getModel();
-        $fakeRequest = new class {
+        $fakeRequest = new class
+        {
             public function ip()
             {
                 throw new \Exception('Forced exception');

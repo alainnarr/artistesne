@@ -11,7 +11,7 @@
 
 <h2>Criar Link</h2>
 
-<form method="POST" action="/test-links">
+<form method="POST" action="/links-test">
     @csrf
 
     <input
@@ -35,7 +35,7 @@
     <p>
         {{ $link->link }}
 
-        <form method="POST" action="/test-links" style="display:inline">
+        <form method="POST" action="/links-test" style="display:inline">
             @csrf
             @method('DELETE')
 
@@ -57,7 +57,7 @@
 
 <h2>Atualizar Link</h2>
 
-<form method="POST" action="/test-links">
+<form method="POST" action="/links-test">
     @csrf
     @method('PUT')
 

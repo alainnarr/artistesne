@@ -2,14 +2,18 @@
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
  * Sent when an artist's profile is automatically disabled after failing to confirm within 4 weeks.
  */
-class ProfileAutoDisabledNotification extends Notification
+class ProfileAutoDisabledNotification extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     public function __construct(public string $reactivateUrl) {}
 
     /**
@@ -27,7 +31,6 @@ class ProfileAutoDisabledNotification extends Notification
             ->greeting('Bonjour '.$notifiable->name.',')
             ->line('Faute de confirmation dans le délai imparti, votre profil sur la plateforme Artistes.ne a été automatiquement désactivé et n\'est plus visible du public.')
             ->line('Vous pouvez le réactiver à tout moment en cliquant sur le bouton ci-dessous.')
-            ->action('Réactiver mon profil', $this->reactivateUrl)
-            ->line('Si vous avez des questions, n\'hésitez pas à nous contacter.');
+            ->action('Réactiver mon profil', $this->reactivateUrl);
     }
 }
