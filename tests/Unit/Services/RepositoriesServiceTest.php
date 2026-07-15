@@ -11,11 +11,14 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Tests\TestCase;
+use Tests\Unit\Services\Traits\Trait_Seed;
 
 class RepositoriesServiceTest extends TestCase
 {
     use RefreshDatabase;
+    use Trait_Seed;
 
     private RepositoriesService $service;
 
@@ -30,7 +33,7 @@ class RepositoriesServiceTest extends TestCase
             $table->timestamps();
         });
 
-        $this->service = new RepositoriesService();
+        $this->service = new RepositoriesService(new Repository());
     }
 
     private function makeRepositoryable(): Model
@@ -210,22 +213,6 @@ class RepositoriesServiceTest extends TestCase
         $this->assertNotEquals($repository->repositoryable_id, $copy->repositoryable_id);
     }
 
-    // public function testReplicateRepositoryThrowsExceptionWhenOriginalFileDoesNotExist(): void
-    // {
-    //     $model = $this->makeRepositoryable();
-    //     $newModel = $this->makeRepositoryable();
-    //     $repository = $model->repositories()->create([
-    //         'enum_disk' => RepositoryDisk::PUBLIC,
-    //         'path' => 'repositories/aa/missing.jpg',
-    //         'name' => 'missing.jpg',
-    //         'file_type' => 'image/jpeg',
-    //         'size' => 10,
-    //     ]);
-
-    //     $this->expectException(Exception::class);
-    //     $this->service->replicateRepository($repository, $newModel);
-    // }
-
     public function testStorageDestroyFileReturnsFalseWhenFileDoesNotExist(): void
     {
         $result = $this->service->storage_destroyFile('repositories/aa/file.jpg', RepositoryDisk::PUBLIC);
@@ -252,5 +239,102 @@ class RepositoriesServiceTest extends TestCase
         }
 
         $this->assertEmpty(Storage::disk('public')->allFiles('repositories'));
+    }
+
+    public function testUpdateRepositoryReplacesFileAndUpdatesData(): void
+    {
+        Storage::fake(RepositoryDisk::PUBLIC->value);
+        $artist = $this->seedArtist();
+        $oldFile = UploadedFile::fake()->create('old.pdf', 100, 'application/pdf');
+        $repository = $this->service->create($artist, $oldFile);
+        $oldPath = $repository->path;
+        $newFile = UploadedFile::fake()->create('new.pdf', 200, 'application/pdf');
+        $updated = $this->service->update($repository->id, $newFile);
+
+        $this->assertNotEquals($oldPath, $updated->path);
+        $this->assertEquals('new.pdf', $updated->name);
+        $this->assertEquals('application/pdf', $updated->file_type);
+        $this->assertEquals(200 * 1024, $updated->size);
+
+        Storage::disk(RepositoryDisk::PUBLIC->value)->assertExists($updated->path);
+        Storage::disk(RepositoryDisk::PUBLIC->value)->assertMissing($oldPath);
+    }
+
+    public function testReplicateRepositoryCreatesCopyForNewOwner(): void
+    {
+        Storage::fake(RepositoryDisk::PUBLIC->value);
+        $artist = $this->seedArtist();
+        $newArtist = $this->seedArtist();
+        $file = UploadedFile::fake()->create('image.jpg', 300, 'image/jpeg');
+        $repository = $this->service->create($artist, $file);
+        Storage::disk(RepositoryDisk::PUBLIC->value)->put($repository->path, 'content');
+        $replicated = $this->service->replicateRepository($repository, $newArtist);
+
+        $this->assertDatabaseHas('repositories', [
+            'id' => $replicated->id,
+            'name' => $repository->name,
+            'file_type' => $repository->file_type,
+            'size' => $repository->size,
+        ]);
+        Storage::disk(RepositoryDisk::PUBLIC->value)->assertExists($replicated->path);
+        $this->assertNotEquals($repository->path, $replicated->path);
+    }
+
+    public function testReplicateRepositoryThrowsExceptionWhenCopyFails(): void
+    {
+        Storage::fake(RepositoryDisk::PUBLIC->value);
+        $artist = $this->seedArtist();
+        $newArtist = $this->seedArtist();
+        $repository = $artist->repositories()->create([
+            'enum_disk' => RepositoryDisk::PUBLIC,
+            'path' => 'repositories/test/file.pdf',
+            'name' => 'file.pdf',
+            'file_type' => 'application/pdf',
+            'size' => 100,
+        ]);
+
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage("Repositories - Failed to copy file");
+        $this->service->replicateRepository($repository, $newArtist);
+    }
+
+    public function testReplicateRepositoryThrowsExceptionWhenOriginalFileDoesNotExist(): void
+    {
+        $model = $this->makeRepositoryable();
+        $newModel = $this->makeRepositoryable();
+        $repository = $model->repositories()->create([
+            'enum_disk' => RepositoryDisk::PUBLIC,
+            'path' => 'repositories/aa/missing.jpg',
+            'name' => 'missing.jpg',
+            'file_type' => 'image/jpeg',
+            'size' => 10,
+        ]);
+
+        $this->expectException(Exception::class);
+        $this->service->replicateRepository($repository, $newModel);
+    }
+
+    public function testUpdateRemovesNewFileWhenUpdateFails(): void
+    {
+        Storage::fake(RepositoryDisk::PUBLIC->value);
+        $repository = Mockery::mock(Repository::class)->makePartial();
+        $repository->path = 'repositories/old/file.pdf';
+        $repository->enum_disk = RepositoryDisk::PUBLIC;
+        $repository->shouldReceive('update')->once()->andThrow(new Exception('Update failed'));
+
+        $mockRepository = Mockery::mock(Repository::class)->makePartial();
+        $mockRepository->shouldReceive('findOrFail')->once()->andReturn($repository);
+        $service = new RepositoriesService($mockRepository);
+        $file = UploadedFile::fake()->create('new.pdf', 100, 'application/pdf');
+
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('Update failed');
+
+        try {
+            $service->update(1, $file);
+        } finally {
+            $files = Storage::disk(RepositoryDisk::PUBLIC->value)->allFiles('repositories');
+            $this->assertCount(0, $files);
+        }
     }
 }

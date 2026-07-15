@@ -56,24 +56,24 @@ trait Trait_Seed
         return Registration::updateOrCreate(
             ['email' => $email],
             array_merge([
-                            'real_name' => 'Real Name',
-                            'artist_name' => 'Test',
-                            'url' => 'ne.ch/test',
-                            'birth_date' => '2020/01/01',
-                            'phone' => '+41000000000',
-                            'email' => $email,
-                            'residence_location' => 'Residence',
-                            'locality' => 'City',
-                            'canton_link' => 'Canton link',
-                            'discipline_main' => $disciplineMain->id,
-                            'discipline_secondary' => $disciplineSecondary->id,
-                            'training' => 'Training',
-                            'paid_work' => 'Paid work',
-                            'recognition' => 'Recognition',
-                            'recent_achievements' => 'Recent achievements',
-                            'last_work' => 'Last work',
-                            'enum_status' => RegistrationStatus::APPROVED->value,
-                        ], $attributes)
+                'real_name' => 'Real Name',
+                'artist_name' => 'Test',
+                'url' => 'ne.ch/test',
+                'birth_date' => '2020/01/01',
+                'phone' => '+41000000000',
+                'email' => $email,
+                'residence_location' => 'Residence',
+                'locality' => 'City',
+                'canton_link' => 'Canton link',
+                'discipline_main' => $disciplineMain->id,
+                'discipline_secondary' => $disciplineSecondary->id,
+                'training' => 'Training',
+                'paid_work' => 'Paid work',
+                'recognition' => 'Recognition',
+                'recent_achievements' => 'Recent achievements',
+                'last_work' => 'Last work',
+                'enum_status' => RegistrationStatus::APPROVED->value,
+            ], $attributes)
         );
     }
 
@@ -84,13 +84,13 @@ trait Trait_Seed
         return User::updateOrCreate(
             ['email' => $email],
             array_merge([
-                            'uuid' => (string) Str::uuid(),
-                            'email' => $email,
-                            'name' => $attributes['name'] ?? 'Name',
-                            'enum_role' => $attributes['enum_role'] ?? UserRole::Artist,
-                            'adfs_id' => $attributes['adfs_id'] ?? null,
-                            'magic_link' => $attributes['magic_link'] ?? null,
-                        ], $attributes)
+                'uuid' => (string) Str::uuid(),
+                'email' => $email,
+                'name' => $attributes['name'] ?? 'Name',
+                'enum_role' => $attributes['enum_role'] ?? UserRole::Artist,
+                'adfs_id' => $attributes['adfs_id'] ?? null,
+                'magic_link' => $attributes['magic_link'] ?? null,
+            ], $attributes)
         );
     }
 
@@ -105,17 +105,17 @@ trait Trait_Seed
         return Artist::updateOrCreate(
             ['registration_id' => $registration->id],
             array_merge([
-                            'user_id' => $user->id,
-                            'artist_name' => 'Test',
-                            'email' => $email,
-                            'phone' => '+41000000000',
-                            'rep_image' => null,
-                            'biography' => 'Biography',
-                            'city' => 'Neuchâtel',
-                            'discipline_secondary' => $disciplineSecondary->id,
-                            'enum_status' => ArtistStatus::Published->value,
-                            'enum_show_contact' => ArtistShowContact::SHOW->value,
-                        ], $attributes)
+                'user_id' => $user->id,
+                'artist_name' => 'Test',
+                'email' => $email,
+                'phone' => '+41000000000',
+                'rep_image' => null,
+                'biography' => 'Biography',
+                'city' => 'Neuchâtel',
+                'discipline_secondary' => $disciplineSecondary->id,
+                'enum_status' => ArtistStatus::Published->value,
+                'enum_show_contact' => ArtistShowContact::SHOW->value,
+            ], $attributes)
         );
     }
 

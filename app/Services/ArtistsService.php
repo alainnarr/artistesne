@@ -36,7 +36,7 @@ class ArtistsService
         ];
         Validator::make($data, Artist::getRules())->validate();
 
-        $activities = $registration->activities()->pluck('id')->toArray();
+        $activities = $registration->activities()->pluck('activities.id')->toArray();
 
         return DB::transaction(function () use ($data, $activities) {
             $artist = Artist::create($data);
@@ -57,7 +57,7 @@ class ArtistsService
             $data = json_decode($data, true) ?? [];
         }
 
-        if (! is_array($data)) {
+        if (!is_array($data)) {
             $data = [];
         }
 

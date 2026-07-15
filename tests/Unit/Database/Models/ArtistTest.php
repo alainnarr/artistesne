@@ -10,7 +10,7 @@ use App\Database\Models\Registration;
 use App\Database\Models\Repository;
 use App\Enums\ArtistShowContact;
 use App\Enums\ArtistStatus;
-use App\Models\User;
+use App\Database\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -69,7 +69,7 @@ class ArtistTest extends TestCase
 
         $this->assertCount(13, $rules);
         $this->assertEquals('required|exists:registrations,id', $rules['registration_id']);
-        $this->assertEquals('required|exists:users,id', $rules['user_id']);
+        $this->assertEquals('required|exists:newusers,id', $rules['user_id']);
         $this->assertEquals('required|string|max:255', $rules['artist_name']);
         $this->assertEquals('nullable|email|max:125', $rules['email']);
         $this->assertEquals('nullable|string|max:15', $rules['phone']);

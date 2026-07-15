@@ -13,6 +13,8 @@ use Exception;
 
 class RepositoriesService
 {
+    public function __construct(private readonly Repository $repository) {}
+
     public function create(
         Model $repositoryable,
         ?UploadedFile $file = null,
@@ -62,7 +64,7 @@ class RepositoriesService
         int $repositoryId,
         UploadedFile $file
     ): Repository {
-        $repository = Repository::findOrFail($repositoryId);
+        $repository = $this->repository->findOrFail($repositoryId);
 
         $oldPath = $repository->path;
         $disk = $repository->enum_disk;
@@ -87,14 +89,13 @@ class RepositoriesService
             if ($newPath) {
                 $this->storage_destroyFile($newPath, $disk);
             }
-
             throw $exception;
         }
     }
 
     public function delete(int $repositoryId): bool
     {
-        $repository = Repository::findOrFail($repositoryId);
+        $repository = $this->repository->findOrFail($repositoryId);
 
         if ($repository->path) {
             $this->storage_destroyFile($repository->path, $repository->enum_disk);

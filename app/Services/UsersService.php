@@ -9,10 +9,13 @@ use Illuminate\Support\Str;
 
 class UsersService
 {
-
-
-    public function create(string $email, string $name, UserRole $role = UserRole::Artist, ?string $adfsId = null, ?string $magicLink = null): User
-    {
+    public function create(
+        string $email,
+        string $name,
+        UserRole $role = UserRole::Artist,
+        ?string $adfsId = null,
+        ?string $magicLink = null
+    ): User {
         $data = [
             'uuid' => (string) Str::uuid(),
             'email' => $email,

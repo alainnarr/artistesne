@@ -1,9 +1,8 @@
 <?php
 
-use App\Database\Schemas\Table;
-use App\Database\Schemas\Audit;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 
 return new class extends Migration {
@@ -19,17 +18,12 @@ return new class extends Migration {
 
     public function up(): void
     {
-        $schema = DB::connection()->getSchemaBuilder();
-        $schema->blueprintResolver(function ($table, $callback) {
-            return new Table($table, $callback);
-        });
-
-        $schema->table($this->tableName, function ($table) {
+        Schema::table($this->tableName, function (Blueprint $table) {
             $this->_columns($table);
         });
 
         if ($this->hasAudit) {
-            $schema->table('_' . $this->tableName, function ($table) {
+            Schema::table('_' . $this->tableName, function (Blueprint $table) {
                 $this->_columns($table);
             });
         }
@@ -37,15 +31,12 @@ return new class extends Migration {
 
     public function down(): void
     {
-        $schema = DB::connection()->getSchemaBuilder();
-        $schema->blueprintResolver(fn ($table, $callback) => new Table($table, $callback));
-
-        $schema->table($this->tableName, function ($table) {
+        Schema::table($this->tableName, function (Blueprint $table) {
             $table->dropColumn(['published_at', 'confirmed_at', 'reminded_at']);
         });
 
         if ($this->hasAudit) {
-            $schema->table('_' . $this->tableName, function ($table) {
+            Schema::table('_' . $this->tableName, function (Blueprint $table) {
                 $table->dropColumn(['published_at', 'confirmed_at', 'reminded_at']);
             });
         }

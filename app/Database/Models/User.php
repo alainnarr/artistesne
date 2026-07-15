@@ -9,7 +9,6 @@ use Illuminate\Validation\Rules\Enum;
 use App\Enums\UserRole;
 use Filament\Panel;
 use Illuminate\Support\Str;
-use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;

@@ -22,7 +22,7 @@ class LinksService
         $records = [];
 
         foreach ($links as $link) {
-            $records[] = $this->create($owner, $link, $type);
+            $records[] = $this->create($owner, $link['link'], $link['enum_type'] ?? $type);
         }
 
         return $records;
