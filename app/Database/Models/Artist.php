@@ -34,9 +34,9 @@ class Artist extends Model
     protected $casts = [
         'enum_status' => ArtistStatus::class,
         'enum_show_contact' => ArtistShowContact::class,
-        'published_at' => 'datetime',
-        'confirmed_at' => 'datetime',
-        'reminded_at' => 'datetime',
+        'published_at' => 'date',
+        'confirmed_at' => 'date',
+        'reminded_at' => 'date',
     ];
 
     /* * * * * * * * VALIDATION * * * * * * * */

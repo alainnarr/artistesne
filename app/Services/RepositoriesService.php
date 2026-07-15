@@ -13,7 +13,12 @@ use Exception;
 
 class RepositoriesService
 {
-    public function __construct(private readonly Repository $repository) {}
+    private readonly Repository $repository;
+    
+    public function __construct(?Repository $repository = null)
+    {
+        $this->repository = $repository ?? new Repository();
+    }
 
     public function create(
         Model $repositoryable,

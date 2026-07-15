@@ -15,7 +15,8 @@ class UsersService
         UserRole $role = UserRole::Artist,
         ?string $adfsId = null,
         ?string $magicLink = null
-    ): User {
+    ): User
+    {
         $data = [
             'uuid' => (string) Str::uuid(),
             'email' => $email,
