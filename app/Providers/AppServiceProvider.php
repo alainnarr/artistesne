@@ -2,15 +2,17 @@
 
 namespace App\Providers;
 
-use App\Socialite\AdfsProvider;
+use App\Filament\Auth\Responses\LogoutResponse as FilamentLogoutResponse;
 use Carbon\CarbonImmutable;
+use Filament\Auth\Http\Responses\Contracts\LogoutResponse as FilamentLogoutResponseContract;
 use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
-use Laravel\Socialite\Contracts\Factory as SocialiteFactory;
 use Symfony\Component\Mime\Address;
 
 class AppServiceProvider extends ServiceProvider
@@ -20,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(FilamentLogoutResponseContract::class, FilamentLogoutResponse::class);
     }
 
     /**
@@ -29,23 +31,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
-        $this->registerSocialiteDrivers();
         $this->configureMailOverrides();
-    }
-
-    /**
-     * Register custom Socialite OAuth2 drivers.
-     */
-    protected function registerSocialiteDrivers(): void
-    {
-        $socialite = $this->app->make(SocialiteFactory::class);
-
-        $socialite->extend('adfs', function () use ($socialite) {
-            $config = config('services.adfs');
-
-            return $socialite->buildProvider(AdfsProvider::class, $config)
-                ->setBaseUrl((string) $config['base_url']);
-        });
+        $this->configureMailLogging();
     }
 
     /**
@@ -53,24 +40,63 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureMailOverrides(): void
     {
-        $redirectTo = config('mail.to.address');
+        $redirectAddresses = config('mail.to.addresses', []);
+        $redirectName = config('mail.to.name');
         $subjectPrefix = config('mail.subject_prefix');
 
-        if (! $redirectTo && ! $subjectPrefix) {
+        if (empty($redirectAddresses) && ! $subjectPrefix) {
             return;
         }
 
-        Event::listen(MessageSending::class, function (MessageSending $event) use ($redirectTo, $subjectPrefix): void {
+        Event::listen(MessageSending::class, function (MessageSending $event) use ($redirectAddresses, $redirectName, $subjectPrefix): void {
             if ($subjectPrefix) {
                 $event->message->subject($subjectPrefix.$event->message->getSubject());
             }
 
-            if ($redirectTo) {
-                $event->message->to(new Address($redirectTo));
+            if (! empty($redirectAddresses)) {
+                $event->message->to(...array_map(
+                    fn (string $address): Address => new Address($address, $redirectName),
+                    $redirectAddresses
+                ));
                 $event->message->cc();
                 $event->message->bcc();
             }
         });
+    }
+
+    /**
+     * Log every outgoing mail attempt and its SMTP acceptance, so delivery
+     * issues (silent failures, misconfigured relay, empty recipient lists)
+     * show up in the logs instead of just "the email never arrived".
+     */
+    protected function configureMailLogging(): void
+    {
+        Event::listen(MessageSending::class, function (MessageSending $event): void {
+            Log::info('Mail sending', [
+                'to' => $this->addressesToStrings($event->message->getTo()),
+                'cc' => $this->addressesToStrings($event->message->getCc()),
+                'bcc' => $this->addressesToStrings($event->message->getBcc()),
+                'subject' => $event->message->getSubject(),
+                'mailer' => config('mail.default'),
+            ]);
+        });
+
+        Event::listen(MessageSent::class, function (MessageSent $event): void {
+            Log::info('Mail sent', [
+                'to' => $this->addressesToStrings($event->message->getTo()),
+                'subject' => $event->message->getSubject(),
+                'message_id' => $event->message->getHeaders()->get('Message-ID')?->getBodyAsString(),
+            ]);
+        });
+    }
+
+    /**
+     * @param  array<int, Address>  $addresses
+     * @return array<int, string>
+     */
+    protected function addressesToStrings(array $addresses): array
+    {
+        return array_map(fn (Address $address): string => $address->toString(), $addresses);
     }
 
     /**

@@ -1,43 +1,44 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Database\Models;
 
+use App\Database\Concerns\HasApprovalStatus;
 use App\Database\Model;
-use App\Database\Traits\PreventUpdate;
 use App\Database\Traits\PreventDelete;
-use App\Enums\ArtistChangeRequestStatus;
+use App\Enums\ApprovalStatus;
+use Database\Factories\ArtistChangeRequestFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Illuminate\Validation\Rules\Enum;
 
 class ArtistChangeRequest extends Model
 {
-    use PreventUpdate;
+    use HasApprovalStatus;
+    use HasFactory;
     use PreventDelete;
 
-    protected $table = 'artists_change_requests';
+    protected static function newFactory(): ArtistChangeRequestFactory
+    {
+        return ArtistChangeRequestFactory::new();
+    }
+
+    protected $table = 'artist_change_requests';
 
     protected $fillable = [
         'artist_id',
+        'submitted_by',
         'payload',
-        'enum_status',
-        'reviewed_at',
+        'status',
         'reviewed_by',
-        'review_notes',
-    ];
-
-    protected $updatable = [
-        'enum_status',
         'reviewed_at',
-        'reviewed_by',
         'review_notes',
     ];
 
     protected function casts(): array
     {
         return [
-            'enum_status' => ArtistChangeRequestStatus::class,
+            'status' => ApprovalStatus::class,
             'payload' => 'array',
             'reviewed_at' => 'datetime',
         ];
@@ -48,11 +49,8 @@ class ArtistChangeRequest extends Model
     {
         $rules = [
             'artist_id' => 'required|integer|exists:artists,id',
-            'payload' => 'required|json',
-            'enum_status' => ['required', new Enum(ArtistChangeRequestStatus::class)],
-            'reviewed_at' => 'nullable|date',
-            'reviewed_by' => 'nullable|integer|exists:newusers,id',
-            'review_notes' => 'nullable|string',
+            'submitted_by' => 'required|integer|exists:users,id',
+            'payload' => 'required|array',
         ];
 
         if (empty($fields)) {
@@ -64,24 +62,51 @@ class ArtistChangeRequest extends Model
     /* * * * * * * * END - VALIDATION * * * * * * * */
 
     /* * * * * * * * RELATIONS * * * * * * * */
+    /** @return BelongsTo<Artist, $this> */
     public function artist(): BelongsTo
     {
-        return $this->belongsTo(Artist::class, 'artist_id');
+        return $this->belongsTo(Artist::class);
     }
 
-    public function repositories(): MorphMany
+    /** @return BelongsTo<User, $this> */
+    public function submitter(): BelongsTo
     {
-        return $this->morphMany(Repository::class, 'repositoryable');
+        return $this->belongsTo(User::class, 'submitted_by');
     }
 
-    public function image(): MorphOne
-    {
-        return $this->morphOne(Repository::class, 'repositoryable');
-    }
-
-    public function reviewedBy(): BelongsTo
+    /** @return BelongsTo<User, $this> */
+    public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
     }
     /* * * * * * * * END - RELATIONS * * * * * * * */
+
+    /**
+     * Apply the proposed payload to the related artist.
+     *
+     * Only keys in the explicit allowlist are applied to prevent privilege
+     * escalation (e.g. an attacker crafting a payload with user_id or slug).
+     */
+    public function apply(): void
+    {
+        $allowed = [
+            'artist_name',
+            'biography',
+            'city',
+            'discipline_main_id',
+            'discipline_secondary',
+            'activities',
+            'secondary_activities',
+            'keywords',
+            'links',
+            'collaborations',
+            'enum_show_contact',
+        ];
+
+        $safe = array_intersect_key($this->payload, array_flip($allowed));
+
+        if (! empty($safe)) {
+            $this->artist->update($safe);
+        }
+    }
 }

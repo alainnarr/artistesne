@@ -1,13 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\ArtistChangeRequests;
 
+use App\Database\Models\ArtistChangeRequest;
 use App\Enums\ApprovalStatus;
 use App\Filament\Resources\ArtistChangeRequests\Pages\EditArtistChangeRequest;
 use App\Filament\Resources\ArtistChangeRequests\Pages\ListArtistChangeRequests;
 use App\Filament\Resources\ArtistChangeRequests\Schemas\ArtistChangeRequestForm;
 use App\Filament\Resources\ArtistChangeRequests\Tables\ArtistChangeRequestsTable;
-use App\Models\ArtistChangeRequest;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -23,15 +25,17 @@ class ArtistChangeRequestResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Validation';
 
-    protected static ?string $modelLabel = 'Modification proposée';
+    protected static ?string $modelLabel = 'Modification';
 
-    protected static ?string $pluralModelLabel = 'Modifications proposées';
+    protected static ?string $pluralModelLabel = 'Modifications';
 
-    protected static ?string $navigationLabel = 'Modifications proposées';
+    protected static ?string $navigationLabel = 'Modifications';
 
     public static function getNavigationBadge(): ?string
     {
-        $count = static::getModel()::query()->where('status', ApprovalStatus::Pending)->count();
+        $count = static::getModel()::query()
+            ->where('status', ApprovalStatus::Pending->value)
+            ->count();
 
         return $count > 0 ? (string) $count : null;
     }

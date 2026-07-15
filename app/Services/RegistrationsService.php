@@ -3,9 +3,10 @@
 namespace App\Services;
 
 use App\Database\Models\Registration;
+use App\Database\Models\User;
 use App\Enums\RegistrationStatus;
+use App\Enums\RepositoryDisk;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -15,28 +16,27 @@ class RegistrationsService
         private readonly ActivitiesService $activitiesService,
         private readonly RepositoriesService $repositoryService,
         private readonly LinksService $linksService,
-        private readonly UsersService $usersService,
-        private readonly ArtistsService $artistsService
     ) {}
 
     public function create(array $data): Registration
     {
-        $registrationData = Arr::except($data, ['activities', 'files', 'links',]);
-        Validator::make($registrationData, Registration::getRules())->validate();
+        Validator::make($data, Registration::getRules())->validate();
 
-        return DB::transaction(function () use ($data, $registrationData) {
+        return DB::transaction(function () use ($data) {
+            $registrationData = Arr::except($data, ['activities', 'files', 'links']);
             $registration = Registration::create($registrationData);
 
-            //It is not possible to use `attach` directly, as it is not captured by Audit.
+            // It is not possible to use `attach` directly, as it is not captured by Audit.
             $this->activitiesService->attachMultiple($registration, $data['activities'] ?? []);
 
-            if (!empty($data['files'])) {
-                $this->repositoryService->createMultiple($registration, $data['files']);
+            if (! empty($data['files'])) {
+                // Supporting documents (ID, portfolio, etc.) are attached to an
+                // unreviewed registration — they must never be publicly
+                // reachable before (or after) a gestionnaire has approved it.
+                $this->repositoryService->createMultiple($registration, $data['files'], RepositoryDisk::PRIVATE);
             }
 
-            if (!empty($data['links'])) {
-                $this->linksService->createMultiple($registration, $data['links']);
-            }
+            $this->linksService->createMultiple($registration, $data['links'] ?? []);
 
             return $registration->fresh(['activities', 'repositories', 'links']);
         });
@@ -44,11 +44,11 @@ class RegistrationsService
 
     public function update(Registration $registration, array $data): Registration
     {
-        Validator::make($data, Registration::getRules(array_keys($data), ['id' => $registration->id,]))->validate();
+        Validator::make($data, Registration::getRules(array_keys($data), ['id' => $registration->id]))->validate();
 
         return DB::transaction(function () use ($registration, $data) {
 
-            $registrationData = Arr::except($data, ['activities', 'files', 'links',]);
+            $registrationData = Arr::except($data, ['activities', 'files', 'links']);
 
             $registration->update($registrationData);
 
@@ -57,7 +57,7 @@ class RegistrationsService
             }
 
             if (isset($data['files'])) {
-                $this->repositoryService->sync($registration, $data['files']);
+                $this->repositoryService->sync($registration, $data['files'], RepositoryDisk::PRIVATE);
             }
 
             if (isset($data['links'])) {
@@ -71,23 +71,15 @@ class RegistrationsService
     public function changeStatus(
         Registration $registration,
         RegistrationStatus $status,
+        User $reviewer,
         ?string $reviewNotes = null
     ): Registration {
-        $reviewer = Auth::user();
-
-        if ($status === RegistrationStatus::APPROVED) {
-            $user = $this->usersService->create($registration->email, $registration->name);
-            $this->artistsService->create($registration, $user);
-        }
-
         $registration->update([
             'enum_status' => $status,
             'reviewed_at' => now(),
-            'reviewed_by' => $reviewer?->id,
+            'reviewed_by' => $reviewer->id,
             'review_notes' => $reviewNotes,
         ]);
-
-        // TODO - Notify according to status
 
         return $registration;
     }

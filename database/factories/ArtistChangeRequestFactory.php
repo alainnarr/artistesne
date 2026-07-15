@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Database\Models\Artist;
+use App\Database\Models\ArtistChangeRequest;
+use App\Database\Models\User;
 use App\Enums\ApprovalStatus;
-use App\Models\Artist;
-use App\Models\ArtistChangeRequest;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -23,7 +23,7 @@ class ArtistChangeRequestFactory extends Factory
             'payload' => [
                 'biography' => '<p>'.$this->faker->paragraph(5).'</p>',
             ],
-            'status' => ApprovalStatus::Pending,
+            'status' => ApprovalStatus::Pending->value,
         ];
     }
 }

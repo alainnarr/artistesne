@@ -2,10 +2,17 @@
 
 declare(strict_types=1);
 
-use App\Models\Artist;
+use App\Database\Models\Artist;
+use Database\Seeders\ActivitiesSeeder;
+use Database\Seeders\DisciplinesSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 
 uses(LazilyRefreshDatabase::class);
+
+beforeEach(function (): void {
+    (new DisciplinesSeeder)->run();
+    (new ActivitiesSeeder)->run();
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -22,12 +29,12 @@ it('renders the home page without JavaScript errors', function () {
         ->assertNoJavaScriptErrors()
         ->assertSee('Annuaire des artistes')
         ->assertSee('Découvrir les artistes');
-})->skip('must be revisited');
+});
 
 it('renders the public artists directory with published artists', function () {
-    Artist::factory()->published()->create(['name' => 'Alice Martin']);
-    Artist::factory()->published()->create(['name' => 'Bruno Dupont']);
-    Artist::factory()->create(['name' => 'Brouillon Caché']); // draft, must not appear
+    Artist::factory()->published()->create(['artist_name' => 'Alice Martin']);
+    Artist::factory()->published()->create(['artist_name' => 'Bruno Dupont']);
+    Artist::factory()->create(['artist_name' => 'Brouillon Caché']); // draft, must not appear
 
     visit('/artistes')
         ->assertNoJavaScriptErrors()
@@ -35,31 +42,31 @@ it('renders the public artists directory with published artists', function () {
         ->assertSee('Alice Martin')
         ->assertSee('Bruno Dupont')
         ->assertDontSee('Brouillon Caché');
-})->skip('must be revisited');
+});
 
 it('renders a published artist profile page', function () {
-    $artist = Artist::factory()->published()->create(['name' => 'Alice Martin']);
+    $artist = Artist::factory()->published()->create(['artist_name' => 'Alice Martin']);
 
     visit(route('public.artist.show', $artist))
         ->assertNoJavaScriptErrors()
         ->assertSee('Alice Martin');
-})->skip('must be revisited');
+});
 
 it('renders the about page', function () {
     visit('/a-propos')
         ->assertNoJavaScriptErrors()
         ->assertSee('À propos');
-})->skip('must be revisited');
+});
 
 it('renders the contact page', function () {
     visit('/contact')
         ->assertNoJavaScriptErrors()
         ->assertSee('Nous contacter');
-})->skip('must be revisited');
+});
 
 it('renders the registration form landing (step 1)', function () {
     visit('/devenir-artiste')
         ->assertNoJavaScriptErrors()
         ->assertSee('référencement')
         ->assertSee('Étape suivante');
-})->skip('must be revisited');
+});

@@ -2,30 +2,23 @@
 
 namespace App\Services;
 
+use App\Contracts\RepositoryableContract;
 use App\Database\Models\Repository;
-use Illuminate\Database\Eloquent\Model;
+use App\Enums\RepositoryDisk;
+use Exception;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use App\Enums\RepositoryDisk;
-use Exception;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RepositoriesService
 {
-    private readonly Repository $repository;
-    
-    public function __construct(?Repository $repository = null)
-    {
-        $this->repository = $repository ?? new Repository();
-    }
-
     public function create(
-        Model $repositoryable,
+        RepositoryableContract $repositoryable,
         ?UploadedFile $file = null,
         RepositoryDisk $disk = RepositoryDisk::PUBLIC
-    ): Repository
-    {
+    ): Repository {
         if (is_null($file)) {
             throw new Exception('Repositories - File not sended');
         }
@@ -35,13 +28,16 @@ class RepositoriesService
         try {
             $path = $this->storage_storeFile($file, $disk);
 
-            return $repositoryable->repositories()->create([
+            $repository = new Repository([
                 'enum_disk' => $disk,
                 'path' => $path,
                 'name' => $file->getClientOriginalName(),
                 'file_type' => $file->getMimeType(),
                 'size' => $file->getSize(),
             ]);
+            $repositoryable->repositories()->save($repository);
+
+            return $repository;
         } catch (Exception $exception) {
             if ($path) {
                 $this->storage_destroyFile($path, $disk);
@@ -52,7 +48,7 @@ class RepositoriesService
     }
 
     public function createMultiple(
-        Model $repositoryable,
+        RepositoryableContract $repositoryable,
         array $files,
         RepositoryDisk $disk = RepositoryDisk::PUBLIC
     ): array {
@@ -69,7 +65,7 @@ class RepositoriesService
         int $repositoryId,
         UploadedFile $file
     ): Repository {
-        $repository = $this->repository->findOrFail($repositoryId);
+        $repository = Repository::findOrFail($repositoryId);
 
         $oldPath = $repository->path;
         $disk = $repository->enum_disk;
@@ -94,13 +90,19 @@ class RepositoriesService
             if ($newPath) {
                 $this->storage_destroyFile($newPath, $disk);
             }
+
             throw $exception;
         }
     }
 
+    public function download(Repository $repository): StreamedResponse
+    {
+        return Storage::disk($repository->enum_disk->value)->download($repository->path, $repository->name);
+    }
+
     public function delete(int $repositoryId): bool
     {
-        $repository = $this->repository->findOrFail($repositoryId);
+        $repository = Repository::findOrFail($repositoryId);
 
         if ($repository->path) {
             $this->storage_destroyFile($repository->path, $repository->enum_disk);
@@ -121,7 +123,7 @@ class RepositoriesService
     }
 
     public function sync(
-        Model $repositoryable,
+        RepositoryableContract $repositoryable,
         array $files,
         RepositoryDisk $disk = RepositoryDisk::PUBLIC
     ): array {
@@ -155,8 +157,10 @@ class RepositoriesService
     {
         if ($this->storage_existFile($path, $disk) && str_starts_with($path, 'repositories/')) {
             Storage::disk($disk->value)->delete($path);
+
             return true;
         }
+
         return false;
     }
 
@@ -169,41 +173,7 @@ class RepositoriesService
     {
         $uuid = Str::uuid()->toString();
         $parts = str_split($uuid, 2);
-        return 'repositories/' . Arr::first($parts) . '/' . Arr::last($parts);
-    }
 
-    public function replicateRepository(
-        Repository $repository,
-        Model $newRepositoryable
-    ): Repository {
-        $disk = $repository->enum_disk;
-        $newPath = null;
-
-        try {
-            $extension = pathinfo($repository->path, PATHINFO_EXTENSION);
-
-            $newPath = $this->getBasePath()
-                . '/'
-                . Str::uuid()
-                . ($extension ? '.' . $extension : '');
-
-            if (! Storage::disk($disk->value)->copy($repository->path, $newPath)) {
-                throw new Exception("Repositories - Failed to copy file from [{$repository->path}] to [{$newPath}]");
-            }
-            return $newRepositoryable->repositories()->create([
-                'enum_disk' => $disk,
-                'path' => $newPath,
-                'name' => $repository->name,
-                'file_type' => $repository->file_type,
-                'size' => $repository->size,
-            ]);
-
-        } catch (Exception $exception) {
-            if ($newPath) {
-                $this->storage_destroyFile($newPath, $disk);
-            }
-
-            throw $exception;
-        }
+        return 'repositories/'.Arr::first($parts).'/'.Arr::last($parts);
     }
 }

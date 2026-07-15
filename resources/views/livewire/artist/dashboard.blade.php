@@ -18,8 +18,8 @@
         </x-ds.section>
     @endif
 
-    {{-- Reactivation banner when artist profile is Draft / disabled --}}
-    @if ($artist && ! $artist->isPublished())
+    {{-- Reactivation banner when a previously-published artist profile has been disabled --}}
+    @if ($artist && ! $artist->isPublished() && $artist->published_at)
         <x-ds.section variant="paper" padding="sm">
             <div class="flex flex-col gap-4 rounded border border-brand-muted/40 bg-brand-cream px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -94,7 +94,7 @@
                                         </x-ds.btn>
                                     @else
                                         <x-ds.tag variant="secondary">
-                                            {{ $artist->status->label() }}
+                                            {{ $artist->enum_status->label() }}
                                         </x-ds.tag>
                                     @endif
                                 </div>
@@ -107,8 +107,8 @@
                                 Recevoir un lien
                             </h3>
                             <p class="text-sm leading-relaxed text-brand-paper/85">
-                                Vous avez fait votre demande de référencement il y a plus de 7 jours et vous
-                                n'avez pas reçu de lien pour finaliser la création de votre profil.
+                                Vous pouvez à tout moment demander un nouveau lien de connexion pour accéder
+                                à votre espace artiste.
                             </p>
                             <div class="mt-auto pt-2">
                                 <x-ds.btn

@@ -1,8 +1,8 @@
 <?php
 
+use App\Database\Models\Artist;
+use App\Database\Models\User;
 use App\Enums\ArtistStatus;
-use App\Models\Artist;
-use App\Models\User;
 use App\Notifications\ProfileAutoDisabledNotification;
 use App\Notifications\SemiannualReminderFollowupNotification;
 use App\Notifications\SemiannualReminderNotification;
@@ -50,7 +50,7 @@ it('disables artists who have not confirmed after 28 days', function () {
         'confirmation_token' => 'tok',
     ]);
     $this->artisan('artist:disable-inactive')->assertSuccessful();
-    expect($artist->fresh()->status)->toBe(ArtistStatus::Draft);
+    expect($artist->fresh()->enum_status)->toBe(ArtistStatus::Draft);
     Notification::assertSentTo($user, ProfileAutoDisabledNotification::class);
 });
 

@@ -62,6 +62,7 @@ host('staging')
     ->setRemoteUser('web')
     ->setDeployPath('/data/artistes')
     ->set('http_user', 'www-data')
+    ->set('uploads_path', '/mnt/typo3_data/artistes-staging_uploads')
     ->setForwardAgent(false);
 
 host('production')
@@ -71,6 +72,7 @@ host('production')
     ->setRemoteUser('web')
     ->setDeployPath('/data/artistes')
     ->set('http_user', 'www-data')
+    ->set('uploads_path', '/mnt/typo3_data/artistes_uploads')
     ->setForwardAgent(false);
 
 // --- Tasks ----------------------------------------------------------------
@@ -123,6 +125,26 @@ task('deploy:storage:link', function () {
     run('ln -s {{deploy_path}}/shared/storage/app/public {{release_path}}/public/storage');
 })->desc('Symlink public/storage to shared storage');
 
+/**
+ * User-uploaded files (artist portraits, attachments) must live on the
+ * mounted mass-storage volume (/mnt/typo3_data, same DFS share used by the
+ * TYPO3 sites' fileadmin/uploads folders) instead of the local /data disk,
+ * so they follow the same backup/retention policy as every other app.
+ *
+ * storage/app/public is turned into a symlink pointing at the shared mount;
+ * everything else (logs, framework cache/sessions/views) stays on local
+ * disk under {{deploy_path}}/shared/storage since it doesn't need to be
+ * persisted on the network share.
+ */
+task('deploy:uploads:link', function () {
+    $uploadsPath = get('uploads_path');
+
+    run("mkdir -p {$uploadsPath}");
+    run('mkdir -p {{deploy_path}}/shared/storage/app');
+    run('rm -rf {{deploy_path}}/shared/storage/app/public');
+    run("ln -sfn {$uploadsPath} {{deploy_path}}/shared/storage/app/public");
+})->desc('Point storage/app/public at the shared /mnt uploads volume');
+
 task('artisan:optimize', function () {
     run('cd {{release_path}} && {{bin/php}} artisan optimize');
 })->desc('Cache config, routes, views & events in one shot');
@@ -140,6 +162,7 @@ task('deploy', [
     'deploy:release',
     'deploy:update_code',     // ← uploads artefact (no git, no node)
     'deploy:shared',          // ← links .env + storage from shared/
+    'deploy:uploads:link',    // ← points storage/app/public at /mnt uploads volume
     'deploy:fix_storage_permissions',
     'deploy:writable',
     'deploy:storage:link',

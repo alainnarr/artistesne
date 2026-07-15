@@ -74,7 +74,7 @@ class PrelaunchMode
         if (config('app.trusted_proxies') && $request->header('X-Forwarded-For')) {
             $ips = array_map('trim', explode(',', (string) $request->header('X-Forwarded-For')));
 
-            return $ips[0] ?? (string) $request->ip();
+            return $ips[0];
         }
 
         return (string) $request->ip();

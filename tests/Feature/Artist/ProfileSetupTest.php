@@ -1,8 +1,9 @@
 <?php
 
+use App\Database\Models\Artist;
+use App\Database\Models\Discipline;
+use App\Database\Models\User;
 use App\Livewire\Artist\ProfileSetup;
-use App\Models\Artist;
-use App\Models\User;
 use Livewire\Livewire;
 
 it('redirects guests away from the profile setup page', function () {
@@ -25,15 +26,17 @@ it('saves biography, discipline and activities to the artist record', function (
     $user = User::factory()->artist()->create();
     Artist::factory()->for($user)->create([
         'biography' => null,
-        'discipline' => null,
+        'discipline_main_id' => null,
         'activities' => [],
     ]);
+
+    $peinture = Discipline::where('code', 'visuels')->firstOrFail();
 
     $this->actingAs($user);
 
     Livewire::test(ProfileSetup::class)
         ->set('biography', "Artiste pluridisciplinaire basée à Neuchâtel.\n\nDeuxième paragraphe.")
-        ->set('discipline', 'Peinture')
+        ->set('discipline_main_id', $peinture->id)
         ->set('activities', ['Peintre', 'Illustrateur·trice'])
         ->call('save')
         ->assertSet('submitted', true)
@@ -41,7 +44,7 @@ it('saves biography, discipline and activities to the artist record', function (
 
     $artist = $user->fresh()->artist;
     expect($artist->biography)->toContain('<p>Artiste pluridisciplinaire');
-    expect($artist->discipline)->toBe('Peinture');
+    expect($artist->discipline_main_id)->toBe($peinture->id);
     expect($artist->activities)->toBe(['Peintre', 'Illustrateur·trice']);
 });
 
@@ -63,7 +66,7 @@ it('saves links and collaborations in step 2', function () {
     $artist = $user->fresh()->artist;
     expect($artist->links)->toMatchArray([['label' => 'Site web', 'url' => 'https://example.com']]);
     expect($artist->collaborations)->toMatchArray([['name' => 'Théâtre du Château', 'url' => 'https://theatre.ch']]);
-    expect($artist->display_contact_button)->toBeTrue();
+    expect($artist->enum_show_contact->toBool())->toBeTrue();
 });
 
 it('requires biography to advance to step 2', function () {

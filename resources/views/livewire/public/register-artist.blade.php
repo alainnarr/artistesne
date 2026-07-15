@@ -154,9 +154,9 @@
                                         required
                                         :disabled="blank($main_domain)"
                                     >
-                                        @foreach ($this->availableActivities as $activity)
-                                            <option value="{{ $activity }}">
-                                                {{ $activity === $otherActivity ? config('taxonomy.other_label') : $activity }}
+                                        @foreach ($this->availableActivities as $id => $label)
+                                            <option value="{{ $id }}">
+                                                {{ $id === $otherActivity ? config('taxonomy.other_label') : $label }}
                                             </option>
                                         @endforeach
                                     </x-register.field>
@@ -253,14 +253,29 @@
 
                                     <div class="flex flex-col gap-1.5">
                                         <p class="font-serif text-lg font-bold text-brand">Documents</p>
-                                        <label
-                                            for="registration-documents"
+                                        <div
                                             x-data="{
                                                 dragging: false,
+                                                clientErrors: [],
+                                                maxSize: 5 * 1024 * 1024,
+                                                allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+                                                validate(files) {
+                                                    const errors = [];
+                                                    Array.from(files).forEach(f => {
+                                                        const ext = f.name.split('.').pop().toLowerCase();
+                                                        if (!this.allowedExtensions.includes(ext)) {
+                                                            errors.push(`« ${f.name} » : format non autorisé (formats acceptés : .pdf, .jpg, .png).`);
+                                                        } else if (f.size > this.maxSize) {
+                                                            errors.push(`« ${f.name} » : fichier trop volumineux (5 Mo maximum).`);
+                                                        }
+                                                    });
+                                                    this.clientErrors = errors;
+                                                },
                                                 handleDrop(e) {
                                                     this.dragging = false;
                                                     const el = document.getElementById('registration-documents');
                                                     if (!el || !e.dataTransfer?.files?.length) return;
+                                                    this.validate(e.dataTransfer.files);
                                                     // Assign via DataTransfer to trigger Livewire's file watcher
                                                     const dt = new DataTransfer();
                                                     Array.from(el.files ?? []).forEach(f => dt.items.add(f));
@@ -269,23 +284,45 @@
                                                     el.dispatchEvent(new Event('change', { bubbles: true }));
                                                 },
                                             }"
-                                            x-on:dragover.prevent="dragging = true"
-                                            x-on:dragleave.prevent="dragging = false"
-                                            x-on:drop.prevent="handleDrop($event)"
-                                            :class="dragging ? 'border-brand-teal bg-brand-mint/10' : 'border-zinc-300 hover:border-brand hover:bg-brand-mint/10'"
-                                            class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[2px] border bg-brand-paper px-4 py-8 text-center text-sm text-brand-muted transition"
+                                            class="flex flex-col gap-1.5"
                                         >
-                                            <x-picto name="file-upload" class="size-8 text-brand" />
-                                            <span>Glissez vos documents ici</span>
-                                            <span class="text-xs">ou</span>
-                                            <span class="font-medium text-brand underline">Parcourir vos fichiers</span>
-                                            <input id="registration-documents" type="file" wire:model="documents" multiple accept=".pdf,.jpg,.jpeg,.png" class="hidden">
-                                        </label>
-                                        <p class="text-sm text-brand-muted">Limité à 5 Mo par fichier. Formats acceptés : .pdf, .jpg, .png.</p>
+                                            <label
+                                                for="registration-documents"
+                                                x-on:dragover.prevent="dragging = true"
+                                                x-on:dragleave.prevent="dragging = false"
+                                                x-on:drop.prevent="handleDrop($event)"
+                                                :class="dragging ? 'border-brand-teal bg-brand-mint/10' : 'border-zinc-300 hover:border-brand hover:bg-brand-mint/10'"
+                                                class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[2px] border bg-brand-paper px-4 py-8 text-center text-sm text-brand-muted transition"
+                                            >
+                                                <x-picto name="file-upload" class="size-8 text-brand" />
+                                                <span>Glissez vos documents ici</span>
+                                                <span class="text-xs">ou</span>
+                                                <span class="font-medium text-brand underline">Parcourir vos fichiers</span>
+                                                <input
+                                                    id="registration-documents"
+                                                    type="file"
+                                                    wire:model="documents"
+                                                    multiple
+                                                    accept=".pdf,.jpg,.jpeg,.png"
+                                                    class="hidden"
+                                                    x-on:change="validate($event.target.files)"
+                                                >
+                                            </label>
+                                            <p class="text-sm text-brand-muted">Limité à 5 Mo par fichier. Formats acceptés : .pdf, .jpg, .png.</p>
+
+                                            <template x-if="clientErrors.length > 0">
+                                                <ul class="flex flex-col gap-1">
+                                                    <template x-for="(error, i) in clientErrors" :key="i">
+                                                        <li class="text-sm text-red-600" x-text="error"></li>
+                                                    </template>
+                                                </ul>
+                                            </template>
+                                        </div>
 
                                         <div wire:loading wire:target="documents">
                                             <p class="text-sm text-brand-muted">Téléversement en cours…</p>
                                         </div>
+
 
                                         @if (filled($documents))
                                             <ul class="flex flex-col gap-1">

@@ -1,7 +1,7 @@
 <?php
 
+use App\Database\Models\User;
 use App\Livewire\Artist\Auth\RequestMagicLink;
-use App\Models\User;
 use App\Notifications\ArtistRegistrationAccessNotification;
 use App\Notifications\MagicLinkNotification;
 use Illuminate\Support\Facades\Notification;
@@ -68,7 +68,8 @@ it('throttles magic link requests within one minute', function () {
 
 it('logs an artist in via a valid signed magic link', function () {
     $artist = User::factory()->artist()->create();
-    $url = URL::temporarySignedRoute('artist.magic-link.consume', now()->addMinutes(10), ['user' => $artist->id]);
+    $artist->forceFill(['magic_link_token' => 'valid-token'])->save();
+    $url = URL::temporarySignedRoute('artist.magic-link.consume', now()->addMinutes(10), ['user' => $artist->id, 'token' => 'valid-token']);
 
     $this->get($url)
         ->assertRedirect(route('artist.dashboard'));
@@ -78,7 +79,8 @@ it('logs an artist in via a valid signed magic link', function () {
 
 it('rejects an expired magic link', function () {
     $artist = User::factory()->artist()->create();
-    $url = URL::temporarySignedRoute('artist.magic-link.consume', now()->subMinute(), ['user' => $artist->id]);
+    $artist->forceFill(['magic_link_token' => 'valid-token'])->save();
+    $url = URL::temporarySignedRoute('artist.magic-link.consume', now()->subMinute(), ['user' => $artist->id, 'token' => 'valid-token']);
 
     $this->get($url)->assertRedirect(route('artist.login'));
     expect(auth()->check())->toBeFalse();
@@ -86,9 +88,31 @@ it('rejects an expired magic link', function () {
 
 it('rejects a magic link consumed for an admin user id', function () {
     $admin = User::factory()->admin()->create();
-    $url = URL::temporarySignedRoute('artist.magic-link.consume', now()->addMinutes(10), ['user' => $admin->id]);
+    $admin->forceFill(['magic_link_token' => 'valid-token'])->save();
+    $url = URL::temporarySignedRoute('artist.magic-link.consume', now()->addMinutes(10), ['user' => $admin->id, 'token' => 'valid-token']);
 
     $this->get($url)->assertRedirect(route('artist.login'));
+});
+
+it('rejects a magic link when the token does not match (already consumed or superseded)', function () {
+    $artist = User::factory()->artist()->create();
+    $artist->forceFill(['magic_link_token' => 'current-token'])->save();
+    $url = URL::temporarySignedRoute('artist.magic-link.consume', now()->addMinutes(10), ['user' => $artist->id, 'token' => 'stale-token']);
+
+    $this->get($url)->assertRedirect(route('artist.login'));
+    expect(auth()->check())->toBeFalse();
+});
+
+it('is single-use: a second click on the same link is rejected', function () {
+    $artist = User::factory()->artist()->create();
+    $artist->forceFill(['magic_link_token' => 'one-time-token'])->save();
+    $url = URL::temporarySignedRoute('artist.magic-link.consume', now()->addMinutes(10), ['user' => $artist->id, 'token' => 'one-time-token']);
+
+    $this->get($url)->assertRedirect(route('artist.dashboard'));
+    auth()->logout();
+
+    $this->get($url)->assertRedirect(route('artist.login'));
+    expect(auth()->check())->toBeFalse();
 });
 
 it('blocks artists from the admin panel', function () {
@@ -102,10 +126,11 @@ it('issues magic links that stay valid for one week (SPECS 2.3)', function () {
     expect((new MagicLinkNotification)->expiresInMinutes)->toBe(60 * 24 * 7);
 
     $artist = User::factory()->artist()->create();
+    $artist->forceFill(['magic_link_token' => 'week-token'])->save();
     $url = URL::temporarySignedRoute(
         'artist.magic-link.consume',
         now()->addMinutes((new MagicLinkNotification)->expiresInMinutes),
-        ['user' => $artist->id],
+        ['user' => $artist->id, 'token' => 'week-token'],
     );
 
     // Still valid six days later.

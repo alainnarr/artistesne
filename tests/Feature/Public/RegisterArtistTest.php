@@ -1,15 +1,21 @@
 <?php
 
-use App\Enums\ApprovalStatus;
+use App\Database\Models\Discipline;
+use App\Database\Models\Registration;
+use App\Enums\RegistrationStatus;
 use App\Livewire\Public\RegisterArtist;
-use App\Models\ArtistRegistrationRequest;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
 
 it('renders the registration form', function () {
     $this->get(route('artist.register'))
         ->assertOk()
         ->assertSeeLivewire(RegisterArtist::class);
 });
+
+// ── Step 1 validation ────────────────────────────────────────────────────────
 
 it('blocks advancing from step 1 when required fields are missing', function () {
     Livewire::test(RegisterArtist::class)
@@ -33,6 +39,8 @@ it('advances to step 2 when all step 1 fields are valid', function () {
         ->assertHasNoErrors();
 });
 
+// ── Step 2 validation ────────────────────────────────────────────────────────
+
 it('blocks advancing from step 2 when main_domain is missing', function () {
     Livewire::test(RegisterArtist::class)
         ->set('currentStep', 2)
@@ -43,7 +51,11 @@ it('blocks advancing from step 2 when main_domain is missing', function () {
         ->assertHasErrors(['main_domain' => 'required', 'main_activity' => 'required']);
 });
 
-it('creates a registration request on valid submission', function () {
+// ── Submission ────────────────────────────────────────────────────────────────
+
+it('creates a registration on valid submission', function () {
+    Notification::fake();
+
     Livewire::test(RegisterArtist::class)
         ->set('full_name', 'Marie Dupont')
         ->set('birth_date', '1990-06-15')
@@ -51,8 +63,8 @@ it('creates a registration request on valid submission', function () {
         ->set('phoneCountry', 'CH')
         ->set('phone', '+41791234567')
         ->set('locality', 'Neuchâtel')
-        ->set('main_domain', 'musique')
-        ->set('main_activity', 'Compositeur·trice')
+        ->set('main_domain', disciplineId('musique'))
+        ->set('main_activity', activityId('musique.chanteur'))
         ->set('training', 'Conservatoire de Neuchâtel')
         ->set('paid_activity', 'Concerts réguliers')
         ->set('attests', true)
@@ -60,16 +72,27 @@ it('creates a registration request on valid submission', function () {
         ->assertSet('submitted', true)
         ->assertHasNoErrors();
 
-    expect(ArtistRegistrationRequest::count())->toBe(1);
-    $req = ArtistRegistrationRequest::first();
-    expect($req->email)->toBe('marie@example.com');
-    expect($req->status)->toBe(ApprovalStatus::Pending);
+    expect(Registration::count())->toBe(1);
+
+    $reg = Registration::first();
+    expect($reg->email)->toBe('marie@example.com');
+    expect($reg->enum_status)->toBe(RegistrationStatus::OPEN);
+    expect($reg->real_name)->toBe('Marie Dupont');
 });
 
-it('does not create a duplicate request for an already pending email', function () {
-    ArtistRegistrationRequest::factory()->create([
+it('does not create a duplicate for an already-pending email', function () {
+    Notification::fake();
+
+    // Existing open registration for the same email.
+    Registration::create([
+        'real_name' => 'Marie Dupont',
+        'artist_name' => 'Marie Dupont',
+        'birth_date' => '1990-06-15',
         'email' => 'marie@example.com',
-        'status' => ApprovalStatus::Pending,
+        'phone' => '+41791234567',
+        'residence_location' => 'Neuchâtel',
+        'discipline_main' => Discipline::where('code', 'musique')->value('id'),
+        'enum_status' => RegistrationStatus::OPEN->value,
     ]);
 
     Livewire::test(RegisterArtist::class)
@@ -79,18 +102,22 @@ it('does not create a duplicate request for an already pending email', function 
         ->set('phoneCountry', 'CH')
         ->set('phone', '+41791234567')
         ->set('locality', 'Neuchâtel')
-        ->set('main_domain', 'musique')
-        ->set('main_activity', 'Compositeur·trice')
+        ->set('main_domain', disciplineId('musique'))
+        ->set('main_activity', activityId('musique.chanteur'))
         ->set('training', 'Conservatoire de Neuchâtel')
         ->set('paid_activity', 'Concerts réguliers')
         ->set('attests', true)
         ->call('submit')
-        ->assertSet('submitted', true);
+        ->assertHasErrors(['email'])
+        ->assertSet('submitted', false);
 
-    expect(ArtistRegistrationRequest::count())->toBe(1);
+    // Still 1 — no duplicate created.
+    expect(Registration::count())->toBe(1);
 });
 
 it('rejects a javascript: URL in registration links', function () {
+    Notification::fake();
+
     Livewire::test(RegisterArtist::class)
         ->set('full_name', 'Test')
         ->set('birth_date', '1990-01-01')
@@ -98,8 +125,8 @@ it('rejects a javascript: URL in registration links', function () {
         ->set('phoneCountry', 'CH')
         ->set('phone', '+41791234567')
         ->set('locality', 'Neuchâtel')
-        ->set('main_domain', 'musique')
-        ->set('main_activity', 'Compositeur·trice')
+        ->set('main_domain', disciplineId('musique'))
+        ->set('main_activity', activityId('musique.chanteur'))
         ->set('training', 'Formation A')
         ->set('paid_activity', 'Activité B')
         ->set('links', ['javascript:alert(1)'])

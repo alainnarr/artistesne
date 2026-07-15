@@ -54,6 +54,41 @@ echo "✔ Package synced to ${RELEASE_DIR}"
 mkdir -p "${SHARED_DIR}/storage/framework/"{cache,sessions,views} \
          "${SHARED_DIR}/storage/logs"
 
+# User-uploaded files (artist portraits, attachments) must live on the
+# mounted mass-storage volume (/mnt/typo3_data, same DFS share used by the
+# TYPO3 sites' fileadmin/uploads folders) instead of the local /data disk,
+# so they follow the same backup/retention policy as every other app.
+# storage/app/public becomes a symlink to the shared mount; storage/app/private
+# (registration CV/portfolio documents — never publicly reachable) stays on
+# local disk under shared/storage since it doesn't need to be on the network share.
+#
+# NOTE: on vdn-typos1, "shared/storage/app" ended up owned solely by
+# www-data (mode 0700), created by a PHP-FPM web request rather than this
+# script, so this deploy account currently CANNOT write into it. These
+# commands are wrapped in `|| true` (with a warning) so a pre-existing
+# permissions problem here does NOT abort the whole deploy — see
+# app/Http/Controllers/Admin/StoragePermissionsMaintenanceController.php
+# for the temporary self-service fix, or ask ops to `chown` it to match
+# storage/framework and storage/logs above.
+case "${ENVIRONMENT_NAME}" in
+    Production) UPLOADS_PATH="/mnt/typo3_data/artistes_uploads" ;;
+    *)          UPLOADS_PATH="/mnt/typo3_data/artistes-staging_uploads" ;;
+esac
+mkdir -p "${UPLOADS_PATH}" 2>/dev/null || echo "⚠ Could not create/access ${UPLOADS_PATH} (mount missing or permission denied?)"
+if mkdir -p "${SHARED_DIR}/storage/app/private" 2>/dev/null; then
+    if rm -rf "${SHARED_DIR}/storage/app/public" 2>/dev/null; then
+        if ln -sfn "${UPLOADS_PATH}" "${SHARED_DIR}/storage/app/public"; then
+            echo "✔ storage/app/public → ${UPLOADS_PATH}"
+        else
+            echo "⚠ Could not symlink storage/app/public — check ownership of ${SHARED_DIR}/storage/app"
+        fi
+    else
+        echo "⚠ Could not remove existing storage/app/public — check ownership of ${SHARED_DIR}/storage/app"
+    fi
+else
+    echo "⚠ Could not create ${SHARED_DIR}/storage/app/private (permission denied?) — registration document uploads/exports will fail until ownership is fixed. See StoragePermissionsMaintenanceController."
+fi
+
 # Remove any packaged copies so symlinks can be placed
 rm -rf "${RELEASE_DIR}/storage"
 rm -f  "${RELEASE_DIR}/.env"
@@ -111,6 +146,20 @@ if sudo -n /bin/systemctl reload php8.4-fpm 2>/dev/null; then
     echo "✔ php8.4-fpm reloaded"
 else
     echo "⚠ Could not reload php8.4-fpm (no sudo rule?) — reload manually if needed"
+fi
+
+# ── 5b. Restart the queue worker (systemd --user unit, no sudo needed) ───
+# QUEUE_CONNECTION=database: exports, magic-link emails and approval
+# notifications are only ever processed by a persistent `queue:work` worker.
+# Restarting (not reloading) picks up the new code for already-running jobs.
+# This runs as this script's own user (the `octopus` SSH/deploy account) via
+# its systemd --user instance — see deploy/octopus/artistes-queue-worker.service
+# for the unit to install (requires `loginctl enable-linger` once so it
+# survives past this deploy's SSH session).
+if systemctl --user restart artistes-queue-worker 2>/dev/null; then
+    echo "✔ artistes-queue-worker restarted"
+else
+    echo "⚠ Could not restart artistes-queue-worker (user unit not installed/enabled?) — queued jobs (exports, emails) will NOT be processed until a worker runs. See deploy/octopus/artistes-queue-worker.service."
 fi
 
 # ── 6. Prune old releases (keep last 5) ──────────────────────────────────

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Artist;
 
+use App\Database\Models\Artist;
 use App\Http\Controllers\Controller;
-use App\Models\Artist;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 

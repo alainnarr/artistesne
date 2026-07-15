@@ -1,7 +1,8 @@
 <?php
 
+use App\Database\Models\Artist;
+use App\Database\Models\Discipline;
 use App\Livewire\Public\ArtistsIndex;
-use App\Models\Artist;
 use Livewire\Livewire;
 
 it('responds with 200 on /artistes', function () {
@@ -18,8 +19,8 @@ it('shows published artists', function () {
 });
 
 it('filters artists by search', function () {
-    Artist::factory()->published()->create(['name' => 'Alice Martin']);
-    Artist::factory()->published()->create(['name' => 'Bob Dupont']);
+    Artist::factory()->published()->create(['artist_name' => 'Alice Martin']);
+    Artist::factory()->published()->create(['artist_name' => 'Bob Dupont']);
 
     Livewire::test(ArtistsIndex::class)
         ->set('search', 'Alice')
@@ -28,32 +29,33 @@ it('filters artists by search', function () {
 });
 
 it('filters artists by discipline via filter modal', function () {
-    Artist::factory()->published()->create(['name' => 'Alice Martin', 'discipline' => 'peinture']);
-    Artist::factory()->published()->create(['name' => 'Bob Dupont', 'discipline' => 'musique']);
+    $peinture = Discipline::where('code', 'visuels')->firstOrFail();
+    $musique = Discipline::where('code', 'musique')->firstOrFail();
+
+    Artist::factory()->published()->create(['artist_name' => 'Alice Martin', 'discipline_main_id' => $peinture->id]);
+    Artist::factory()->published()->create(['artist_name' => 'Bob Dupont', 'discipline_main_id' => $musique->id]);
 
     Livewire::test(ArtistsIndex::class)
-        ->set('filterDomain', 'peinture')
+        ->set('filterDomain', (string) $peinture->id)
         ->assertSee('Alice Martin')
         ->assertDontSee('Bob Dupont');
 });
 
 it('only shows main activities in the filter modal once a primary domain is selected', function () {
-    Artist::factory()->published()->create([
-        'discipline' => 'Musique',
-        'activities' => ['Chanteur-euse'],
-    ]);
+    $musique = Discipline::where('code', 'musique')->firstOrFail();
+    Artist::factory()->published()->create(['discipline_main_id' => $musique->id]);
 
     Livewire::test(ArtistsIndex::class)
         ->assertSee('Pour afficher les activités principales, vous devez sélectionner un domaine.')
         ->assertDontSeeHtml('wire:model.live="filterActivities"')
-        ->set('filterDomain', 'Musique')
+        ->set('filterDomain', (string) $musique->id)
         ->assertDontSee('Pour afficher les activités principales, vous devez sélectionner un domaine.')
         ->assertSeeHtml('wire:model.live="filterActivities"');
 });
 
 it('sorts artists by name ascending by default', function () {
-    Artist::factory()->published()->create(['name' => 'Zoé Bernard']);
-    Artist::factory()->published()->create(['name' => 'Alice Martin']);
+    Artist::factory()->published()->create(['artist_name' => 'Zoé Bernard']);
+    Artist::factory()->published()->create(['artist_name' => 'Alice Martin']);
 
     Livewire::test(ArtistsIndex::class)
         ->assertSet('sort', 'name');
@@ -67,7 +69,7 @@ it('card links point to artist profile', function () {
 });
 
 it('shows empty state when no artists match the search', function () {
-    Artist::factory()->published()->create(['name' => 'Alice Martin']);
+    Artist::factory()->published()->create(['artist_name' => 'Alice Martin']);
 
     Livewire::test(ArtistsIndex::class)
         ->set('search', 'zzznomatch')

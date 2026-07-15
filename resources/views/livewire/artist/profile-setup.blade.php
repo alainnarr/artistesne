@@ -63,10 +63,10 @@
                             />
 
                             <x-ds.select
-                                wire:model.live="discipline"
-                                name="discipline"
+                                wire:model.live="discipline_main_id"
+                                name="discipline_main_id"
                                 label="Domaine principal"
-                                :error="$errors->first('discipline')"
+                                :error="$errors->first('discipline_main_id')"
                             >
                                 <option value="">— Choisir un domaine —</option>
                                 @foreach ($disciplineOptions as $value => $label)
@@ -75,10 +75,10 @@
                             </x-ds.select>
 
                             <x-ds.select
-                                wire:model.live="secondary_discipline"
-                                name="secondary_discipline"
+                                wire:model.live="discipline_secondary"
+                                name="discipline_secondary"
                                 label="Domaine secondaire (facultatif)"
-                                :error="$errors->first('secondary_discipline')"
+                                :error="$errors->first('discipline_secondary')"
                             >
                                 <option value="">— Aucun —</option>
                                 @foreach ($disciplineOptions as $value => $label)
@@ -113,19 +113,55 @@
                                 @endif
                                 @if (count($activities) < 4)
                                     <div class="flex gap-2">
-                                        <x-ds.input
+                                        <x-ds.select
                                             wire:model="newActivity"
                                             name="newActivity"
-                                            placeholder="Ex. : Peintre, Sculpteur…"
-                                            wire:keydown.enter.prevent="addActivity"
                                             class="flex-1"
-                                        />
+                                            :disabled="blank($discipline_main_id)"
+                                        >
+                                            <option value="">
+                                                {{ blank($discipline_main_id) ? '— Choisir d\'abord un domaine —' : '— Choisir une activité —' }}
+                                            </option>
+                                            @foreach ($mainActivityOptions as $label)
+                                                <option value="{{ $label }}">{{ $label }}</option>
+                                            @endforeach
+                                        </x-ds.select>
                                         <x-ds.btn type="button" variant="secondary" size="sm" wire:click="addActivity">
                                             Ajouter
                                         </x-ds.btn>
                                     </div>
                                 @endif
                                 @error('activities') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
+                            </div>
+
+                            {{-- Activités secondaires --}}
+                            <div class="flex flex-col gap-3">
+                                <label class="block text-sm font-medium text-brand">Activités secondaires</label>
+                                @if (count($secondary_activities) > 0)
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach ($secondary_activities as $i => $activity)
+                                            <span class="inline-flex items-center gap-1.5 border border-brand-hairline bg-brand-paper px-3 py-1 text-sm text-brand"
+                                                  wire:key="sec-act-{{ $i }}">
+                                                {{ $activity }}
+                                                <button type="button" wire:click="removeSecondaryActivity({{ $i }})" class="text-brand-muted hover:text-brand" aria-label="Retirer">
+                                                    <x-picto name="close" class="size-3.5" />
+                                                </button>
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @endif
+                                <div class="flex gap-2">
+                                    <x-ds.select wire:model="newSecondaryActivity" name="newSecondaryActivity" class="flex-1">
+                                        <option value="">— Choisir une activité —</option>
+                                        @foreach ($secondaryActivityOptions as $label)
+                                            <option value="{{ $label }}">{{ $label }}</option>
+                                        @endforeach
+                                    </x-ds.select>
+                                    <x-ds.btn type="button" variant="secondary" size="sm" wire:click="addSecondaryActivity">
+                                        Ajouter
+                                    </x-ds.btn>
+                                </div>
+                                @error('secondary_activities') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
                             </div>
 
                             {{-- Mots-clés --}}

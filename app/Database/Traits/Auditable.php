@@ -2,19 +2,23 @@
 
 namespace App\Database\Traits;
 
-use App\Database\Models\Audit;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 trait Auditable
 {
     public const CREATE = 'C';
+
     public const DELETE = 'D';
+
     public const HARDDELETE = 'HD';
+
     public const RESTORE = 'R';
+
     public const UPDATE = 'U';
 
     public static function bootAuditable(): void
@@ -38,26 +42,26 @@ trait Auditable
 
         static::deleting(function ($model) {
             $usesSoftDeletes = in_array(
-                \Illuminate\Database\Eloquent\SoftDeletes::class,
+                SoftDeletes::class,
                 class_uses_recursive(static::class)
             );
 
-            if ($usesSoftDeletes && !$model->forceDeleting) {
+            if ($usesSoftDeletes && ! $model->forceDeleting) {
                 $action = self::DELETE;
                 self::storeAuditable($action, $model);
 
                 $model->audit_action = $action;
-                    $model->fillable = array_merge($model->fillable, self::transactionColumns());
-                    $model->attributes = array_merge(
-                        $model->attributes,
-                        self::transactionColumnsAttributes($action)
-                    );
-                    $model->save();
+                $model->fillable = array_merge($model->fillable, self::transactionColumns());
+                $model->attributes = array_merge(
+                    $model->attributes,
+                    self::transactionColumnsAttributes($action)
+                );
+                $model->save();
             } else {
                 self::storeAuditable(self::HARDDELETE, $model);
             }
         });
-        if (in_array('Illuminate\Database\Eloquent\SoftDeletes', class_uses_recursive(static::class))) {
+        if (method_exists(static::class, 'restoring')) {
             static::restoring(function ($model) {
                 self::storeAuditable(self::RESTORE, $model);
 
@@ -76,7 +80,7 @@ trait Auditable
             'created_by',
             'updated_by',
             'audit_action',
-            'audit_url'
+            'audit_url',
         ];
     }
 
@@ -85,7 +89,7 @@ trait Auditable
         $columns = [];
         switch ($action) {
             case self::CREATE:
-                $columns['created_at'] = new Carbon();
+                $columns['created_at'] = new Carbon;
                 $columns['created_by'] = self::getUser();
                 $columns['updated_at'] = null;
                 $columns['updated_by'] = null;
@@ -93,15 +97,15 @@ trait Auditable
             case self::RESTORE:
                 $columns['deleted_at'] = null;
                 $columns['deleted_by'] = null;
-                $columns['updated_at'] = new Carbon();
+                $columns['updated_at'] = new Carbon;
                 $columns['updated_by'] = self::getUser();
                 break;
             case self::UPDATE:
-                $columns['updated_at'] = new Carbon();
+                $columns['updated_at'] = new Carbon;
                 $columns['updated_by'] = self::getUser();
                 break;
             case self::DELETE:
-                $columns['deleted_at'] = new Carbon();
+                $columns['deleted_at'] = new Carbon;
                 $columns['deleted_by'] = self::getUser();
                 break;
         }
@@ -117,9 +121,13 @@ trait Auditable
         return Auth::user()?->id;
     }
 
-    protected static function getUrl(): mixed
+    protected static function getUrl(): ?string
     {
-        return $_SERVER['REQUEST_URI'] ?? null;
+        try {
+            return request()->getRequestUri();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     protected static function substringInArray($substring, array $array): bool
@@ -158,9 +166,9 @@ trait Auditable
 
         if ($action === self::HARDDELETE) {
             if ($tableName !== 'audits') {
-                $data['deleted_at'] = new Carbon();
+                $data['deleted_at'] = new Carbon;
             } else {
-                $data['updated_at'] = new Carbon();
+                $data['updated_at'] = new Carbon;
             }
             $data['audit_action'] = self::DELETE;
             DB::table($tableName)->insert($data);
@@ -172,9 +180,9 @@ trait Auditable
         if ($model->getAuditable()) {
             return $model->getAuditable();
         } else {
-            $audit = Schema::hasTable('_' . $model->getTable());
+            $audit = Schema::hasTable('_'.$model->getTable());
             if (($audit)) {
-                return '_' . $model->getTable();
+                return '_'.$model->getTable();
             } else {
                 return 'audits';
             }

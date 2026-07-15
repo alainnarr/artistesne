@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Database\Models\Activity;
 use App\Database\Models\Discipline;
 use Illuminate\Database\Seeder;
-use App\Enums\DisciplineType;
 
 class ActivitiesSeeder extends Seeder
 {
@@ -19,12 +18,12 @@ class ActivitiesSeeder extends Seeder
                 $count++;
                 $discipline = Discipline::where('code', $arrDiscipline['code'])->firstOrFail();
                 $activity['discipline_id'] = $discipline->id;
-                $code = $arrDiscipline['code'] . '.' . $activity['code'];
+                $code = $arrDiscipline['code'].'.'.$activity['code'];
                 $activity['code'] = $code;
-                Activity::firstOrCreate(['code' => $activity['code']], $activity);
+                Activity::updateOrCreate(['code' => $activity['code']], $activity);
             }
         }
 
-        $this->command?->info("Activities seeded: ".$count.' activity(s).');
+        $this->command?->info('Activities seeded: '.$count.' activity(s).');
     }
 }

@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\ArtistChangeRequests\Pages;
 
+use App\Database\Models\ArtistChangeRequest;
 use App\Filament\Resources\ArtistChangeRequests\ArtistChangeRequestResource;
-use App\Models\ArtistChangeRequest;
 use App\Notifications\ChangeRequestDecisionNotification;
 use App\Support\ReviewMessageTemplates;
 use Filament\Actions\Action;
@@ -37,7 +39,7 @@ class EditArtistChangeRequest extends EditRecord
                 ->icon('heroicon-o-check-circle')
                 ->requiresConfirmation()
                 ->modalHeading('Appliquer ces modifications ?')
-                ->modalDescription('La page de l\'artiste sera mise à jour immédiatement.')
+                ->modalDescription("La page de l'artiste sera mise à jour immédiatement.")
                 ->schema([
                     Textarea::make('notes')->label('Message interne (optionnel)')->rows(3),
                 ])

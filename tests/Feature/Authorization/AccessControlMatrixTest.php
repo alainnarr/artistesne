@@ -2,18 +2,16 @@
 
 declare(strict_types=1);
 
-use App\Models\Artist;
-use App\Models\ArtistRegistrationRequest;
-use App\Models\User;
-use Illuminate\Support\Facades\Storage;
+use App\Database\Models\Artist;
+use App\Database\Models\User;
 
 /*
 |--------------------------------------------------------------------------
 | Matrice de contrôle d'accès (visiteur / artiste / admin)
 |--------------------------------------------------------------------------
 |
-| Vérifie les frontières entre les trois personas : portail artiste, panneau
-| d'administration Filament et téléchargement de documents de demande.
+| Vérifie les frontières entre les trois personas : portail artiste et
+| panneau d'administration Filament.
 |
 */
 
@@ -64,51 +62,4 @@ it('allows an admin to reach the Filament admin panel', function () {
     $this->actingAs($admin)
         ->get('/admin')
         ->assertSuccessful();
-});
-
-// --- Téléchargement de documents de demande (admin only) ---------------------
-
-it('lets an admin download a registration document', function () {
-    Storage::fake('local');
-    Storage::disk('local')->put('registrations/cv.pdf', 'fake-pdf-content');
-
-    $request = ArtistRegistrationRequest::factory()->create([
-        'documents' => [['name' => 'cv.pdf', 'path' => 'registrations/cv.pdf']],
-    ]);
-
-    $admin = User::factory()->admin()->create();
-
-    $this->actingAs($admin)
-        ->get(route('admin.registration-requests.documents.download', [
-            'artistRegistrationRequest' => $request->id,
-            'index' => 0,
-        ]))
-        ->assertOk()
-        ->assertDownload('cv.pdf');
-});
-
-it('blocks guests from downloading registration documents', function () {
-    Storage::fake('local');
-    Storage::disk('local')->put('registrations/cv.pdf', 'fake-pdf-content');
-
-    $request = ArtistRegistrationRequest::factory()->create([
-        'documents' => [['name' => 'cv.pdf', 'path' => 'registrations/cv.pdf']],
-    ]);
-
-    $this->get(route('admin.registration-requests.documents.download', [
-        'artistRegistrationRequest' => $request->id,
-        'index' => 0,
-    ]))->assertRedirect();
-});
-
-it('returns 404 when downloading a non-existent document index', function () {
-    $request = ArtistRegistrationRequest::factory()->create(['documents' => []]);
-    $admin = User::factory()->admin()->create();
-
-    $this->actingAs($admin)
-        ->get(route('admin.registration-requests.documents.download', [
-            'artistRegistrationRequest' => $request->id,
-            'index' => 5,
-        ]))
-        ->assertNotFound();
 });

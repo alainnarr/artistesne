@@ -1,90 +1,48 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
-use App\Database\Models\Artist;
-use App\Database\Models\Registration;
-use App\Database\Models\ActivityArtist;
 use App\Database\Models\ActivityRegistration;
+use App\Database\Models\Registration;
 
 class ActivitiesService
 {
     /**
-     * Method for managing Many-to-Many relationships that can be tracked by the audit system.
+     * Attach multiple activities to a registration by creating ActivityRegistration pivot rows.
+     *
+     * We do NOT use Eloquent's attach() because it bypasses model events and
+     * therefore the Auditable trait would not record the inserts.
+     *
+     * @param  array<int, int>  $activityIds
      */
-    public function attach(Registration|Artist $owner, int $activityId): ActivityRegistration|ActivityArtist
+    public function attachMultiple(Registration $registration, array $activityIds): void
     {
-        return match (true) {
-            $owner instanceof Registration => ActivityRegistration::firstOrCreate([
-                'activity_id' => $activityId,
-                'registration_id' => $owner->id,
-            ]),
-
-            $owner instanceof Artist => ActivityArtist::firstOrCreate([
-                'activity_id' => $activityId,
-                'artist_id' => $owner->id,
-            ]),
-        };
-    }
-
-    public function detach(Registration|Artist $owner, int $activityId): bool
-    {
-        return match (true) {
-            $owner instanceof Registration => (bool) ActivityRegistration::where([
-                'activity_id' => $activityId,
-                'registration_id' => $owner->id,
-            ])->delete(),
-
-            $owner instanceof Artist => (bool) ActivityArtist::where([
-                'activity_id' => $activityId,
-                'artist_id' => $owner->id,
-            ])->delete(),
-        };
-    }
-
-    public function attachMultiple(Registration|Artist $owner, array $activityIds): array
-    {
-        $records = [];
-
         foreach ($activityIds as $activityId) {
-            $records[] = $this->attach($owner, $activityId);
+            ActivityRegistration::create([
+                'registration_id' => $registration->id,
+                'activity_id' => (int) $activityId,
+            ]);
         }
-
-        return $records;
     }
 
-    public function detachMultiple(Registration|Artist $owner, array $activityIds): int
+    /**
+     * Sync activities on a registration: remove all existing pivot rows and
+     * re-attach the provided list.
+     *
+     * ActivityRegistration uses PreventUpdate but not PreventDelete, so direct
+     * deletion is allowed. Each deletion fires the Auditable deleting hook,
+     * writing a HARDDELETE record to the generic audits table.
+     *
+     * @param  array<int, int>  $activityIds
+     */
+    public function sync(Registration $registration, array $activityIds): void
     {
-        $deleted = 0;
+        ActivityRegistration::where('registration_id', $registration->id)
+            ->get()
+            ->each(fn (ActivityRegistration $row) => $row->delete());
 
-        foreach ($activityIds as $activityId) {
-            $deleted += (int) $this->detach($owner, $activityId);
-        }
-
-        return $deleted;
-    }
-
-    public function sync(Registration|Artist $owner, array $activityIds): void
-    {
-        $currentActivityIds = match (true) {
-            $owner instanceof Registration => ActivityRegistration::where('registration_id', $owner->id)
-                ->pluck('activity_id')
-                ->toArray(),
-
-            $owner instanceof Artist => ActivityArtist::where('artist_id',$owner->id)
-                ->pluck('activity_id')
-                ->toArray(),
-        };
-
-        $attach = array_diff($activityIds, $currentActivityIds);
-        $detach = array_diff($currentActivityIds, $activityIds);
-
-        if (!empty($attach)) {
-            $this->attachMultiple($owner, $attach);
-        }
-
-        if (!empty($detach)) {
-            $this->detachMultiple($owner, $detach);
-        }
+        $this->attachMultiple($registration, $activityIds);
     }
 }

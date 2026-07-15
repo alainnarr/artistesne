@@ -1,16 +1,16 @@
 <?php
 
+use App\Database\Models\Artist;
+use App\Database\Models\ArtistChangeRequest;
+use App\Database\Models\User;
 use App\Enums\ApprovalStatus;
 use App\Livewire\Artist\EditProfile;
-use App\Models\Artist;
-use App\Models\ArtistChangeRequest;
-use App\Models\User;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\Livewire;
 
 it('renders the artist dashboard for a linked artist', function () {
     $user = User::factory()->artist()->create();
-    Artist::factory()->published()->create(['user_id' => $user->id, 'name' => 'Jane Doe']);
+    Artist::factory()->published()->create(['user_id' => $user->id, 'artist_name' => 'Jane Doe']);
 
     $this->actingAs($user)->get(route('artist.dashboard'))
         ->assertOk()
@@ -33,7 +33,7 @@ it('shows a pending change banner', function () {
     ArtistChangeRequest::factory()->create([
         'artist_id' => $artist->id,
         'submitted_by' => $user->id,
-        'status' => ApprovalStatus::Pending,
+        'status' => ApprovalStatus::Pending->value,
     ]);
 
     $this->actingAs($user)->get(route('artist.dashboard'))
@@ -44,14 +44,14 @@ it('creates a change request when the artist edits their page', function () {
     $user = User::factory()->artist()->create();
     $artist = Artist::factory()->create([
         'user_id' => $user->id,
-        'name' => 'Old Name',
+        'artist_name' => 'Old Name',
         'biography' => '<p>Ancienne bio.</p>',
     ]);
 
     $this->actingAs($user);
 
     Livewire::test(EditProfile::class)
-        ->set('name', 'New Name')
+        ->set('artist_name', 'New Name')
         ->set('biographyText', "Nouvelle bio.\n\nDeuxième paragraphe.")
         ->call('save')
         ->assertSet('submitted', true)
@@ -59,7 +59,7 @@ it('creates a change request when the artist edits their page', function () {
 
     expect(ArtistChangeRequest::count())->toBe(1);
     $change = ArtistChangeRequest::first();
-    expect($change->payload)->toMatchArray(['name' => 'New Name']);
+    expect($change->payload)->toMatchArray(['artist_name' => 'New Name']);
     expect($change->payload['biography'] ?? null)->toContain('<p>Nouvelle bio.</p>');
     expect($change->status)->toBe(ApprovalStatus::Pending);
 });
@@ -70,13 +70,13 @@ it('blocks submission when a pending change already exists', function () {
     ArtistChangeRequest::factory()->create([
         'artist_id' => $artist->id,
         'submitted_by' => $user->id,
-        'status' => ApprovalStatus::Pending,
+        'status' => ApprovalStatus::Pending->value,
     ]);
 
     $this->actingAs($user);
 
     Livewire::test(EditProfile::class)
-        ->set('name', 'Whatever')
+        ->set('artist_name', 'Whatever')
         ->set('biographyText', 'Bio')
         ->call('save')
         ->assertHasErrors('biographyText');
@@ -88,9 +88,8 @@ it('rejects submissions with no actual changes', function () {
     $user = User::factory()->artist()->create();
     Artist::factory()->create([
         'user_id' => $user->id,
-        'name' => 'Same',
+        'artist_name' => 'Same',
         'biography' => '<p>Bio.</p>',
-        'discipline' => 'Peinture',
         'links' => [],
     ]);
 
@@ -114,8 +113,7 @@ it('saves a photo directly without creating a change request for it', function (
     Artist::factory()->create([
         'user_id' => $user->id,
         'biography' => '<p>Bio existante.</p>',
-        'name' => 'Ancien nom',
-        'cover_image' => null,
+        'artist_name' => 'Ancien nom',
     ]);
 
     $this->actingAs($user);
@@ -124,18 +122,18 @@ it('saves a photo directly without creating a change request for it', function (
 
     Livewire::test(EditProfile::class)
         ->set('photo', $fakePhoto)
-        ->set('name', 'Nouveau nom')
+        ->set('artist_name', 'Nouveau nom')
         ->set('biographyText', 'Bio existante.')
         ->call('save')
         ->assertSet('submitted', true)
         ->assertHasNoErrors();
 
     // Photo saved directly on the artist — not bundled into the change request.
-    expect($user->fresh()->artist->cover_image)->not->toBeNull();
+    expect($user->fresh()->artist->rep_image)->not->toBeNull();
 
     $changeRequest = ArtistChangeRequest::first();
     expect($changeRequest)->not->toBeNull();
-    expect($changeRequest->payload)->not->toHaveKey('cover_image');
+    expect($changeRequest->payload)->not->toHaveKey('rep_image');
 });
 
 it('rejects a javascript: URL in edit profile links', function () {
@@ -145,7 +143,7 @@ it('rejects a javascript: URL in edit profile links', function () {
     $this->actingAs($user);
 
     Livewire::test(EditProfile::class)
-        ->set('name', 'Artiste Test')
+        ->set('artist_name', 'Artiste Test')
         ->set('biographyText', 'Bio valide.')
         ->set('links', [['label' => 'Evil', 'url' => 'javascript:void(0)']])
         ->call('save')

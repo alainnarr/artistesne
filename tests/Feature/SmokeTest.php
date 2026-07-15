@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Artist;
+use App\Database\Models\Artist;
 
 it('public site key pages load without 5xx errors', function (string $route) {
     $url = match ($route) {
@@ -29,5 +29,5 @@ it('artist profile page loads for a published artist', function () {
 
     $this->get(route('public.artist.show', $artist))
         ->assertOk()
-        ->assertSee($artist->name);
+        ->assertSee($artist->artist_name);
 });

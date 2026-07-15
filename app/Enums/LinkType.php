@@ -1,12 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Enums;
 
 enum LinkType: string
 {
     case COLLABORATION = 'collaboration';
     case WEBSITE = 'website';
-
     case FACEBOOK = 'facebook';
     case INSTAGRAM = 'instagram';
     case TIKTOK = 'tiktok';

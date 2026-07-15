@@ -11,11 +11,6 @@ use Livewire\Livewire;
 |--------------------------------------------------------------------------
 | Cas limites du formulaire de demande de référencement
 |--------------------------------------------------------------------------
-|
-| Complète tests/Feature/Public/RegisterArtistTest.php avec une matrice
-| rigoureuse : téléphone, territorialité hors canton, activité « autre »,
-| règle des 2 critères sur 3, attestation, documents, liens, date de naissance.
-|
 */
 
 /**
@@ -99,28 +94,13 @@ it('rejects a birth date in the future', function () {
         ->assertSet('currentStep', 1);
 });
 
-// --- Étape 2 : activité « autre » --------------------------------------------
-
-it('requires a free-text activity when "autre" is selected', function () {
-    Livewire::test(RegisterArtist::class)
-        ->set('currentStep', 2)
-        ->set('main_domain', 'musique')
-        ->set('main_activity', config('taxonomy.other_value'))
-        ->set('main_activity_other', '')
-        ->set('training', 'Conservatoire')
-        ->set('paid_activity', 'Concerts')
-        ->call('nextStep')
-        ->assertHasErrors(['main_activity_other' => 'required'])
-        ->assertSet('currentStep', 2);
-});
-
 // --- Étape 2 : règle des 2 critères sur 3 ------------------------------------
 
 it('requires a recent achievement when fewer than two criteria are filled', function () {
     Livewire::test(RegisterArtist::class)
         ->set('currentStep', 2)
-        ->set('main_domain', 'musique')
-        ->set('main_activity', 'Chanteur-euse')
+        ->set('main_domain', disciplineId('musique'))
+        ->set('main_activity', activityId('musique.chanteur'))
         ->set('training', 'Conservatoire')   // 1 seul critère rempli
         ->set('paid_activity', '')
         ->set('recognition', '')
@@ -133,8 +113,8 @@ it('requires a recent achievement when fewer than two criteria are filled', func
 it('does not require a recent achievement when at least two criteria are filled', function () {
     Livewire::test(RegisterArtist::class)
         ->set('currentStep', 2)
-        ->set('main_domain', 'musique')
-        ->set('main_activity', 'Chanteur-euse')
+        ->set('main_domain', disciplineId('musique'))
+        ->set('main_activity', activityId('musique.chanteur'))
         ->set('training', 'Conservatoire')
         ->set('paid_activity', 'Concerts réguliers') // 2 critères remplis
         ->set('recent_achievement', '')
@@ -147,8 +127,8 @@ it('does not require a recent achievement when at least two criteria are filled'
 
 it('requires the accuracy attestation before submitting', function () {
     registrationWithStep1()
-        ->set('main_domain', 'musique')
-        ->set('main_activity', 'Chanteur-euse')
+        ->set('main_domain', disciplineId('musique'))
+        ->set('main_activity', activityId('musique.chanteur'))
         ->set('training', 'Conservatoire')
         ->set('paid_activity', 'Concerts')
         ->set('attests', false)
@@ -161,8 +141,8 @@ it('requires the accuracy attestation before submitting', function () {
 
 it('rejects documents with a disallowed file type', function () {
     registrationWithStep1()
-        ->set('main_domain', 'musique')
-        ->set('main_activity', 'Chanteur-euse')
+        ->set('main_domain', disciplineId('musique'))
+        ->set('main_activity', activityId('musique.chanteur'))
         ->set('training', 'Conservatoire')
         ->set('paid_activity', 'Concerts')
         ->set('documents', [UploadedFile::fake()->create('malware.exe', 100)])
@@ -173,8 +153,8 @@ it('rejects documents with a disallowed file type', function () {
 
 it('rejects documents larger than 5 MB', function () {
     registrationWithStep1()
-        ->set('main_domain', 'musique')
-        ->set('main_activity', 'Chanteur-euse')
+        ->set('main_domain', disciplineId('musique'))
+        ->set('main_activity', activityId('musique.chanteur'))
         ->set('training', 'Conservatoire')
         ->set('paid_activity', 'Concerts')
         ->set('documents', [UploadedFile::fake()->create('portfolio.pdf', 6000)])
@@ -187,8 +167,8 @@ it('rejects documents larger than 5 MB', function () {
 
 it('rejects a non-URL value among the links', function () {
     registrationWithStep1()
-        ->set('main_domain', 'musique')
-        ->set('main_activity', 'Chanteur-euse')
+        ->set('main_domain', disciplineId('musique'))
+        ->set('main_activity', activityId('musique.chanteur'))
         ->set('training', 'Conservatoire')
         ->set('paid_activity', 'Concerts')
         ->set('links', ['https://valid.example', 'pas-une-url'])

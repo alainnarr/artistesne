@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Public;
 
-use App\Models\Artist;
+use App\Database\Models\Artist;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
