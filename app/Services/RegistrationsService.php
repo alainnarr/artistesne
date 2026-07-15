@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Validator;
 
 class RegistrationsService
 {
-
     public function __construct(
         private readonly ActivitiesService $activitiesService,
         private readonly RepositoriesService $repositoryService,
@@ -22,10 +21,10 @@ class RegistrationsService
 
     public function create(array $data): Registration
     {
-        Validator::make($data, Registration::getRules())->validate();
+        $registrationData = Arr::except($data, ['activities', 'files', 'links',]);
+        Validator::make($registrationData, Registration::getRules())->validate();
 
-        return DB::transaction(function () use ($data) {
-            $registrationData = Arr::except($data, ['activities', 'files', 'links',]);
+        return DB::transaction(function () use ($data, $registrationData) {
             $registration = Registration::create($registrationData);
 
             //It is not possible to use `attach` directly, as it is not captured by Audit.

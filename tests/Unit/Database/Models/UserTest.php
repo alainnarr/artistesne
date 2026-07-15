@@ -162,7 +162,6 @@ class UserTest extends TestCase
         $panel->shouldReceive('getId')
             ->once()
             ->andReturn('admin');
-
         $user = $this->makeModel();
         $user->enum_role = UserRole::Admin;
 
@@ -176,7 +175,6 @@ class UserTest extends TestCase
         $panel->shouldReceive('getId')
             ->once()
             ->andReturn('artist');
-
         $user = $this->makeModel();
         $user->enum_role = UserRole::Admin;
 
@@ -189,7 +187,6 @@ class UserTest extends TestCase
         $panel->shouldReceive('getId')
             ->once()
             ->andReturn('admin');
-
         $user = $this->makeModel();
         $user->enum_role = UserRole::Artist;
 

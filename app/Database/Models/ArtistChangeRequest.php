@@ -38,6 +38,8 @@ class ArtistChangeRequest extends Model
     {
         return [
             'enum_status' => ArtistChangeRequestStatus::class,
+            'payload' => 'array',
+            'reviewed_at' => 'datetime',
         ];
     }
 

@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Enums\ArtistShowContact;
 use App\Enums\ArtistStatus;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use App\Models\User;
 use Illuminate\Validation\Rules\Enum;
 
 class Artist extends Model
@@ -35,6 +34,9 @@ class Artist extends Model
     protected $casts = [
         'enum_status' => ArtistStatus::class,
         'enum_show_contact' => ArtistShowContact::class,
+        'published_at' => 'date',
+        'confirmed_at' => 'date',
+        'reminded_at' => 'date',
     ];
 
     /* * * * * * * * VALIDATION * * * * * * * */
@@ -99,7 +101,7 @@ class Artist extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(\App\Database\Models\User::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function repositories(): MorphMany

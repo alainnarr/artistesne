@@ -78,7 +78,7 @@ class ArtistChangeRequestTest extends TestCase
         $this->assertEquals('required', $rules['enum_status'][0]);
         $this->assertInstanceOf(Enum::class, $rules['enum_status'][1]);
         $this->assertEquals('nullable|date', $rules['reviewed_at']);
-        $this->assertEquals('nullable|integer|exists:users,id', $rules['reviewed_by']);
+        $this->assertEquals('nullable|integer|exists:newusers,id', $rules['reviewed_by']);
         $this->assertEquals('nullable|string', $rules['review_notes']);
     }
 
