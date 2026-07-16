@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Database;
+namespace Tests\Unit\Database\Models;
 
 use App\Database\Models\Activity;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,31 +15,31 @@ class ActivityTest extends TestCase
 
     private function makeModel(): Activity
     {
-        return new Activity();
+        return new Activity;
     }
 
-    public function testGetTableReturnsTableName(): void
+    public function test_get_table_returns_table_name(): void
     {
         $model = $this->makeModel();
 
         $this->assertEquals('activities', $model->getTable());
     }
 
-    public function testGetFillableReturnsArray(): void
+    public function test_get_fillable_returns_array(): void
     {
         $model = $this->makeModel();
 
         $this->assertEquals(['discipline_id', 'code', 'label'], $model->getFillable());
     }
 
-    public function testGetUpdatableReturnsArray(): void
+    public function test_get_updatable_returns_array(): void
     {
         $model = $this->makeModel();
 
         $this->assertEquals([], $model->getUpdatable());
     }
 
-    public function testGetRulesReturnsValidationRules(): void
+    public function test_get_rules_returns_empty_array(): void
     {
         $rules = Activity::getRules();
 
@@ -50,7 +50,7 @@ class ActivityTest extends TestCase
         $this->assertEquals('required|string|max:100', $rules['label']);
     }
 
-    public function testGetRulesReturnsFilteredFields(): void
+    public function test_get_rules_returns_empty_array_when_filtering_fields(): void
     {
         $rules = Activity::getRules(['code']);
 
@@ -68,7 +68,7 @@ class ActivityTest extends TestCase
         $this->assertEquals('required|string|max:50|unique:activities,code,15,id', $rules['code']);
     }
 
-    public function testDisciplineRelation(): void
+    public function test_discipline_relation(): void
     {
         $relation = $this->makeModel()->discipline();
 

@@ -69,8 +69,8 @@
                         </p>
                         <p>
                             Des informations détaillées sur la collecte et l'utilisation des données (journaux
-                            techniques, statistiques d'utilisation, Matomo, etc.) figurent dans la section
-                            <span class="underline underline-offset-2">Protection des données</span>
+                            techniques, statistiques d'utilisation, Matomo, etc.) figurent dans la
+                            <a href="{{ route('public.privacy') }}" wire:navigate class="underline underline-offset-2 hover:no-underline">Protection des données</a>
                             de ce site.
                         </p>
                     </div>

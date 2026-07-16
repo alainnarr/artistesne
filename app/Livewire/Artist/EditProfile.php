@@ -2,16 +2,16 @@
 
 namespace App\Livewire\Artist;
 
+use App\Database\Models\ArtistChangeRequest;
+use App\Database\Models\User;
 use App\Enums\ApprovalStatus;
+use App\Enums\ArtistShowContact;
 use App\Enums\UserRole;
 use App\Livewire\Artist\Concerns\ManagesArtistProfileFields;
-use App\Models\ArtistChangeRequest;
-use App\Models\User;
 use App\Notifications\ChangeRequestSubmittedNotification;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -22,23 +22,27 @@ class EditProfile extends Component
 {
     use ManagesArtistProfileFields, WithFileUploads;
 
+    public int $currentStep = 1;
+
+    public int $totalSteps = 2;
+
     #[Validate('nullable|image|mimes:jpg,jpeg,png|max:5120|dimensions:min_width=400,min_height=500')]
     public ?UploadedFile $photo = null;
 
     #[Validate('required|string|max:255')]
-    public string $name = '';
+    public string $artist_name = '';
 
-    #[Validate('nullable|string|max:120')]
-    public ?string $discipline = null;
+    #[Validate('nullable|integer|exists:disciplines,id')]
+    public ?int $discipline_main_id = null;
 
-    #[Validate('nullable|string|max:255')]
+    #[Validate('nullable|string|max:125')]
     public ?string $city = null;
 
-    #[Validate('nullable|string|max:120')]
-    public ?string $secondary_discipline = null;
+    #[Validate('nullable|integer|exists:disciplines,id')]
+    public ?int $discipline_secondary = null;
 
     #[Validate('required|string|max:5000')]
-    public string $biographyText = '';
+    public string $biography = '';
 
     /** @var array<int, string> */
     #[Validate('array|max:4')]
@@ -77,6 +81,8 @@ class EditProfile extends Component
 
     public string $newActivity = '';
 
+    public string $newSecondaryActivity = '';
+
     public string $newKeyword = '';
 
     public bool $submitted = false;
@@ -88,26 +94,38 @@ class EditProfile extends Component
         /** @var User $user */
         $user = auth()->user();
         $artist = $user->artist;
-        abort_unless($artist, 404, 'Aucune page artiste rattachée.');
+        abort_unless($artist !== null, 404, 'Aucune page artiste rattachée.');
 
-        $this->name = $artist->name;
-        $this->discipline = $artist->discipline;
+        $this->artist_name = $artist->artist_name;
+        $this->discipline_main_id = $artist->discipline_main_id;
         $this->city = $artist->city;
-        $this->secondary_discipline = $artist->secondary_discipline;
-        $this->biographyText = $this->htmlToText($artist->biography ?? '');
+        $this->discipline_secondary = $artist->discipline_secondary;
+        $this->biography = $this->htmlToText($artist->biography ?? '');
         $this->activities = $artist->activities ?? [];
         $this->secondary_activities = $artist->secondary_activities ?? [];
         $this->keywords = $artist->keywords ?? [];
         $this->links = $artist->links ?? [];
         $this->collaborations = $artist->collaborations ?? [];
-        $this->display_contact_button = (bool) $artist->display_contact_button;
+        $this->display_contact_button = $artist->enum_show_contact?->toBool() ?? false;
         $this->hasPendingChange = (bool) $artist->pendingChangeRequest();
+    }
+
+    public function nextStep(): void
+    {
+        $this->validateOnly('artist_name');
+        $this->validateOnly('biography');
+        $this->currentStep = min($this->totalSteps, $this->currentStep + 1);
+    }
+
+    public function previousStep(): void
+    {
+        $this->currentStep = max(1, $this->currentStep - 1);
     }
 
     public function save(): void
     {
         if ($this->hasPendingChange) {
-            $this->addError('biographyText', 'Une modification est déjà en attente de validation.');
+            $this->addError('biography', 'Une modification est déjà en attente de validation.');
 
             return;
         }
@@ -118,33 +136,41 @@ class EditProfile extends Component
         $artist = $user->artist;
 
         $proposed = [
-            'name' => $data['name'],
-            'discipline' => $data['discipline'],
+            'artist_name' => $data['artist_name'],
+            'discipline_main_id' => $data['discipline_main_id'],
             'city' => $data['city'],
-            'secondary_discipline' => $data['secondary_discipline'],
-            'biography' => $this->textToHtml($data['biographyText']),
+            'discipline_secondary' => $data['discipline_secondary'],
+            'biography' => $this->textToHtml($data['biography']),
             'activities' => array_values($data['activities']),
             'secondary_activities' => array_values($data['secondary_activities']),
             'keywords' => array_values($data['keywords']),
             'links' => array_values($data['links']),
             'collaborations' => array_values($data['collaborations']),
-            'display_contact_button' => $data['display_contact_button'],
+            'enum_show_contact' => ArtistShowContact::fromBool($data['display_contact_button'])->value,
         ];
 
         // Photo is handled separately — saved immediately, not via change request.
         if ($this->photo) {
-            $artist->cover_image = $this->storeBwPortrait($this->photo, $artist->cover_image);
+            $this->storeBwPortrait($artist, $this->photo);
             $artist->saveQuietly();
             $this->photo = null;
         }
 
-        // Keep only fields that actually changed.
+        // Keep only fields that actually changed (unwrap enum casts for comparison).
         $payload = collect($proposed)
-            ->filter(fn ($value, $key) => $artist->{$key} != $value)
+            ->filter(function ($value, $key) use ($artist) {
+                $current = $artist->{$key};
+
+                if ($current instanceof \BackedEnum) {
+                    $current = $current->value;
+                }
+
+                return $current != $value;
+            })
             ->all();
 
         if (empty($payload)) {
-            $this->addError('biographyText', 'Aucune modification détectée.');
+            $this->addError('biography', 'Aucune modification détectée.');
 
             return;
         }
@@ -153,7 +179,7 @@ class EditProfile extends Component
             'artist_id' => $artist->id,
             'submitted_by' => auth()->id(),
             'payload' => $payload,
-            'status' => ApprovalStatus::Pending,
+            'status' => ApprovalStatus::Pending->value,
         ]);
 
         $admins = User::where('role', UserRole::Admin)->get();
@@ -171,9 +197,11 @@ class EditProfile extends Component
 
         return view('livewire.artist.edit-profile', [
             'disciplineOptions' => $this->getDisciplineOptionsProperty(),
-            'currentImageUrl' => $artist?->cover_image
-                ? Storage::url($artist->cover_image)
-                : null,
+            'mainActivityOptions' => $this->getMainActivityOptionsProperty(),
+            'secondaryActivityOptions' => $this->getSecondaryActivityOptionsProperty(),
+            'currentImageUrl' => $artist?->repImage?->file,
+            'fullName' => $artist?->registration?->real_name,
+            'email' => $artist?->email,
         ]);
     }
 }

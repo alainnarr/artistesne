@@ -1,12 +1,14 @@
 <?php
 
-use App\Database\Schemas\Table;
 use App\Database\Schemas\Audit;
+use App\Database\Schemas\Table;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     private string $tableName = 'activities';
+
     private bool $hasAudit = false;
 
     private function _columns(&$table)
@@ -15,6 +17,8 @@ return new class extends Migration {
         $table->foreignKey('discipline_id', 'disciplines', 'id', 'bigInteger');
         $table->string('code', 100)->unique();
         $table->string('label', 100);
+
+        $table->index('label');
     }
 
     public function up(): void
@@ -34,7 +38,7 @@ return new class extends Migration {
     {
         Schema::dropIfExists($this->tableName);
         if ($this->hasAudit) {
-            Schema::dropIfExists('_' . $this->tableName);
+            Schema::dropIfExists('_'.$this->tableName);
         }
     }
 };

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Database\Models;
 
 use App\Database\Model;
@@ -17,6 +19,7 @@ class Keyword extends Model
     protected $updatable = [];
 
     /* * * * * * * * VALIDATION * * * * * * * */
+    /** @return array<string, string|array> */
     public static function getRules(array $fields = [], $register = null): array
     {
         $rules = [
@@ -32,11 +35,13 @@ class Keyword extends Model
     /* * * * * * * * END - VALIDATION * * * * * * * */
 
     /* * * * * * * * RELATIONS * * * * * * * */
+    /** @return BelongsToMany<Artist, $this> */
     public function artists(): BelongsToMany
     {
         return $this->belongsToMany(Artist::class, 'keywords_artists', 'keyword_id', 'artist_id');
     }
 
+    /** @return HasMany<KeywordArtist, $this> */
     public function keywordsArtists(): HasMany
     {
         return $this->hasMany(KeywordArtist::class, 'keyword_id');

@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Database\Models\User;
 use App\Enums\UserRole;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -13,6 +13,8 @@ use Illuminate\Support\Str;
  */
 class UserFactory extends Factory
 {
+    protected $model = User::class;
+
     /**
      * The current password being used by the factory.
      */
@@ -26,46 +28,19 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->name(),
+            'uuid' => $this->faker->uuid(),
             'email' => $this->faker->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'role' => UserRole::Artist,
+            'name' => $this->faker->name(),
+            'enum_role' => UserRole::Artist,
             'adfs_id' => null,
-            'remember_token' => Str::random(10),
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-            'two_factor_confirmed_at' => null,
         ];
-    }
-
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
-    }
-
-    /**
-     * Indicate that the model has two-factor authentication configured.
-     */
-    public function withTwoFactor(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'two_factor_secret' => encrypt('secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
-            'two_factor_confirmed_at' => now(),
-        ]);
     }
 
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Admin,
-            'password' => null,
+            'enum_role' => UserRole::Admin,
+            'adfs_id' => null,
         ]);
     }
 
@@ -82,7 +57,7 @@ class UserFactory extends Factory
     public function artist(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Artist,
+            'enum_role' => UserRole::Artist,
             'password' => null,
         ]);
     }

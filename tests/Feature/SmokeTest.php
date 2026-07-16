@@ -1,13 +1,13 @@
 <?php
 
-use App\Models\Artist;
+use App\Database\Models\Artist;
 
 it('public site key pages load without 5xx errors', function (string $route) {
     $url = match ($route) {
-        'home' => route('home'),
-        'about' => route('about'),
-        'contact' => route('contact'),
-        'artist.register' => route('artist.register'),
+        'public.home' => route('public.home'),
+        'public.about' => route('public.about'),
+        'public.contact' => route('public.contact'),
+        'public.artist-registration' => route('public.artist-registration'),
         'artist.login' => route('artist.login'),
         'public.artists.index' => route('public.artists.index'),
     };
@@ -16,10 +16,10 @@ it('public site key pages load without 5xx errors', function (string $route) {
 
     expect($response->getStatusCode())->toBeLessThan(500);
 })->with([
-    'home',
-    'about',
-    'contact',
-    'artist.register',
+    'public.home',
+    'public.about',
+    'public.contact',
+    'public.artist-registration',
     'artist.login',
     'public.artists.index',
 ]);
@@ -29,5 +29,5 @@ it('artist profile page loads for a published artist', function () {
 
     $this->get(route('public.artist.show', $artist))
         ->assertOk()
-        ->assertSee($artist->name);
+        ->assertSee($artist->artist_name);
 });

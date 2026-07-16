@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\SearchSynonym;
+use App\Database\Models\SearchSynonym;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

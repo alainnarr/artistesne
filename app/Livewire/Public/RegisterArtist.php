@@ -2,14 +2,18 @@
 
 namespace App\Livewire\Public;
 
-use App\Enums\ApprovalStatus;
+use App\Database\Models\Activity;
+use App\Database\Models\Discipline;
+use App\Database\Models\Registration;
+use App\Database\Models\User;
+use App\Enums\DisciplineType;
+use App\Enums\RegistrationStatus;
 use App\Enums\UserRole;
-use App\Models\ArtistRegistrationRequest;
-use App\Models\TaxonomyTerm;
-use App\Models\User;
-use App\Notifications\NewRegistrationRequestNotification;
+use App\Notifications\NewRegistrationNotification;
+use App\Services\RegistrationsService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -17,6 +21,14 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
+/**
+ * @property-read bool $isOutsideCanton
+ * @property-read bool $isOtherActivity
+ * @property-read int $criteriaCount
+ * @property-read array<string, array<int, string>> $localityGroups
+ * @property-read array<int, string> $domainOptions
+ * @property-read array<int, string> $availableActivities
+ */
 #[Layout('components.layouts.public')]
 class RegisterArtist extends Component
 {
@@ -93,7 +105,15 @@ class RegisterArtist extends Component
             'artist_name' => ['nullable', 'string', 'max:255'],
             'show_artist_name' => ['boolean'],
             'birth_date' => ['required', 'date', 'before:today'],
-            'email' => ['required', 'email', 'max:255'],
+            'email' => ['required', 'email', 'max:255', function (string $attribute, mixed $value, \Closure $fail): void {
+                $alreadyPending = Registration::where('email', $value)
+                    ->whereIn('enum_status', [RegistrationStatus::OPEN->value, RegistrationStatus::PENDING->value])
+                    ->exists();
+
+                if ($alreadyPending) {
+                    $fail('Une demande est déjà en cours de traitement pour cette adresse e-mail. Merci de patienter le temps de son examen avant d\'en soumettre une nouvelle.');
+                }
+            }],
             'display_contact_button' => ['boolean'],
             'phoneCountry' => ['required', 'string', 'size:2', 'regex:/^[A-Z]{2}$/'],
             'phone' => ['required', 'string', 'max:50', function (string $attribute, mixed $value, \Closure $fail): void {
@@ -106,8 +126,8 @@ class RegisterArtist extends Component
             'canton_link' => [Rule::requiredIf($this->isOutsideCanton), 'nullable', 'string', 'max:500'],
 
             // Étape 2
-            'main_domain' => ['required', Rule::in(array_keys(TaxonomyTerm::domainSlugOptions()))],
-            'main_activity' => ['required', 'string', 'max:255'],
+            'main_domain' => ['required', Rule::exists('disciplines', 'id')],
+            'main_activity' => ['required', Rule::exists('activities', 'id')],
             'main_activity_other' => [Rule::requiredIf($this->isOtherActivity), 'nullable', 'string', 'max:255'],
             'training' => ['nullable', 'string', 'max:1000'],
             'paid_activity' => ['nullable', 'string', 'max:1000'],
@@ -119,7 +139,15 @@ class RegisterArtist extends Component
             'documents' => ['nullable', 'array', 'max:10'],
             'documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'links' => ['nullable', 'array'],
-            'links.*' => ['nullable', 'string', 'url:http,https', 'max:255'],
+            'links.*' => ['nullable', 'string', 'max:255', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (blank($value)) {
+                    return;
+                }
+
+                if (! filter_var($value, FILTER_VALIDATE_URL) || ! preg_match('#^https?://#i', $value)) {
+                    $fail('Veuillez saisir une URL valide (https://…).');
+                }
+            }],
             'attests' => ['accepted'],
         ];
     }
@@ -140,7 +168,9 @@ class RegisterArtist extends Component
             'commune.required' => 'Veuillez préciser votre commune de résidence.',
             'canton_link.required' => 'Décrivez votre ancrage dans le tissu culturel neuchâtelois (activité régulière et significative, partenariats, collaborations).',
             'main_domain.required' => 'Veuillez sélectionner un domaine principal.',
+            'main_domain.exists' => 'Veuillez sélectionner un domaine principal valide.',
             'main_activity.required' => 'Veuillez sélectionner une activité principale.',
+            'main_activity.exists' => 'Veuillez sélectionner une activité principale valide.',
             'main_activity_other.required' => 'Merci de préciser votre activité.',
             'recent_achievement.required' => "Si un seul critère sur 3 est rempli, merci d'indiquer au moins une réalisation artistique dans un cadre professionnel au cours des 3 dernières années.",
             'links.*.url' => 'Veuillez saisir une URL valide (https://…).',
@@ -225,18 +255,22 @@ class RegisterArtist extends Component
     }
 
     /**
-     * Artistic domains keyed by their stable slug (see TaxonomyTerm::domainSlugOptions()),
-     * used for the "Domaine principal" select during registration.
+     * Discipline options from DB, keyed by ID.
      *
-     * @return array<string, string>
+     * @return array<int, string>
      */
     #[Computed]
     public function domainOptions(): array
     {
-        return TaxonomyTerm::domainSlugOptions();
+        return Discipline::where('enum_type', DisciplineType::MAIN->value)
+            ->orderBy('label')
+            ->pluck('label', 'id')
+            ->all();
     }
 
     /**
+     * Activities for the selected discipline, keyed by ID.
+     *
      * @return array<int, string>
      */
     #[Computed]
@@ -246,9 +280,10 @@ class RegisterArtist extends Component
             return [];
         }
 
-        $activities = config('taxonomy.main_activities.'.$this->main_domain, []);
-
-        return [...$activities, config('taxonomy.other_value')];
+        return Activity::where('discipline_id', (int) $this->main_domain)
+            ->orderBy('label')
+            ->pluck('label', 'id')
+            ->all();
     }
 
     public function updatedMainDomain(): void
@@ -339,58 +374,46 @@ class RegisterArtist extends Component
             return;
         }
 
-        $existing = ArtistRegistrationRequest::where('email', $data['email'])
-            ->where('status', ApprovalStatus::Pending)
-            ->exists();
+        $registration = app(RegistrationsService::class)->create([
+            'real_name' => $data['full_name'],
+            'artist_name' => filled($data['artist_name']) ? $data['artist_name'] : $data['full_name'],
+            'birth_date' => $data['birth_date'],
+            'email' => $data['email'],
+            'phone' => trim((string) $data['phone']),
+            'residence_location' => $this->isOutsideCanton ? $data['commune'] : $data['locality'],
+            'locality' => $data['locality'],
+            'canton_link' => $data['canton_link'],
+            'discipline_main' => (int) $data['main_domain'],
+            'training' => $data['training'],
+            'paid_work' => $data['paid_activity'],
+            'recognition' => $data['recognition'],
+            'recent_achievements' => $data['recent_achievement'],
+            'last_work' => $data['last_activity'],
+            'enum_status' => RegistrationStatus::OPEN->value,
+            'activities' => [(int) $data['main_activity']],
+            'files' => $this->documents,
+            'links' => array_values(array_filter($data['links'], fn (?string $link): bool => filled($link))),
+        ]);
 
-        if (! $existing) {
-            $registrationRequest = ArtistRegistrationRequest::create([
-                'full_name' => $data['full_name'],
-                'artist_name' => $data['artist_name'],
-                'show_artist_name' => $data['show_artist_name'],
-                'birth_date' => $data['birth_date'],
-                'email' => $data['email'],
-                'display_contact_button' => $data['display_contact_button'],
-                'phone' => trim($data['phone']),
-                'residence_location' => $this->isOutsideCanton ? $data['commune'] : $data['locality'],
-                'locality' => $data['locality'],
-                'commune' => $data['commune'],
-                'canton_link' => $data['canton_link'],
-                'main_domain' => TaxonomyTerm::domainSlugOptions()[$data['main_domain']] ?? $data['main_domain'],
-                'main_activity' => $this->isOtherActivity ? $data['main_activity_other'] : $data['main_activity'],
-                'main_activity_other' => $data['main_activity_other'],
-                'training' => $data['training'],
-                'paid_activity' => $data['paid_activity'],
-                'recognition' => $data['recognition'],
-                'recent_achievement' => $data['recent_achievement'],
-                'last_activity' => $data['last_activity'],
-                'links' => array_values(array_filter($this->links, fn (?string $link): bool => filled($link))),
-                'documents' => $this->storeDocuments(),
-                'status' => ApprovalStatus::Pending,
+        $admins = User::where('role', UserRole::Admin)->get();
+
+        if ($admins->isEmpty()) {
+            Log::warning('No admin user found to notify of new registration.', ['registration_id' => $registration->id]);
+        }
+
+        try {
+            Notification::send($admins, new NewRegistrationNotification($registration));
+        } catch (\Throwable $e) {
+            // The registration itself is already saved at this point — a mail
+            // failure must not surface as an error to the applicant nor block
+            // their submission from completing.
+            Log::error('Failed to send NewRegistrationNotification to admins.', [
+                'registration_id' => $registration->id,
+                'exception' => $e->getMessage(),
             ]);
-
-            $admins = User::where('role', UserRole::Admin)->get();
-            Notification::send($admins, new NewRegistrationRequestNotification($registrationRequest));
         }
 
         $this->submitted = true;
-    }
-
-    /**
-     * @return array<int, array{name: string, path: string}>
-     */
-    protected function storeDocuments(): array
-    {
-        $stored = [];
-
-        foreach ($this->documents as $document) {
-            $stored[] = [
-                'name' => $document->getClientOriginalName(),
-                'path' => $document->store('registration-documents', 'local'),
-            ];
-        }
-
-        return $stored;
     }
 
     protected function verifyTurnstile(): bool

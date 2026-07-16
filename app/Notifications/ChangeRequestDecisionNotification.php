@@ -2,13 +2,14 @@
 
 namespace App\Notifications;
 
+use App\Database\Models\ArtistChangeRequest;
 use App\Enums\ApprovalStatus;
-use App\Models\ArtistChangeRequest;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class ChangeRequestDecisionNotification extends Notification
+class ChangeRequestDecisionNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -51,7 +52,7 @@ class ChangeRequestDecisionNotification extends Notification
         }
 
         if ($status === ApprovalStatus::ChangesRequested) {
-            $message->action('Modifier ma page', route('artist.profile.edit'));
+            $message->action('Modifier ma page', route('artist.profile-edit'));
         } elseif ($status === ApprovalStatus::Approved) {
             $message->action('Voir ma page', route('public.artist.show', $this->changeRequest->artist));
         }

@@ -1,0 +1,23 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+
+    level: 5
+
+    # Point Larastan at the committed SQL schema dump so it can infer
+    # Eloquent model properties without needing a live database in CI.
+    # Regenerate with: php artisan schema:dump
+    # (Default empty resolves to database_path('schema') via Laravel bootstrap)
+    squashedMigrationsPath: []
+
+    # Disable appended-property existence check: Larastan cannot verify
+    # Attribute::make() accessor return types for $appends entries that are
+    # backed by computed accessors (not DB columns). The @property-read PHPDoc
+    # on each model documents these correctly for IDE / static analysis.
+    checkModelAppends: false
+
+    treatPhpDocTypesAsCertain: false
+    parseModelCastsMethod: true

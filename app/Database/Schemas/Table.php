@@ -2,10 +2,10 @@
 
 namespace App\Database\Schemas;
 
-use InvalidArgumentException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\ColumnDefinition;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class Table extends Blueprint
 {
@@ -41,7 +41,7 @@ class Table extends Blueprint
                 break;
             default:
                 throw new InvalidArgumentException(
-                    "Type: " . $type . " not accepted for enumeration. Only accepts int, boolean, string"
+                    'Type: '.$type.' not accepted for enumeration. Only accepts int, boolean, string'
                 );
         }
 
@@ -54,6 +54,7 @@ class Table extends Blueprint
             $parameters['type'] = 'string';
             $parameters['length'] = 255;
             $this->index($column);
+
             return $this->addColumn($parameters['type'], $column, $parameters);
         } else {
             return $this->foreignKey(
@@ -92,11 +93,12 @@ class Table extends Blueprint
                 $parameters['length'] = $length ?? 255;
                 break;
             default:
-                throw new InvalidArgumentException("Type: " . $type . " not accepted for foreign key");
+                throw new InvalidArgumentException('Type: '.$type.' not accepted for foreign key');
         }
 
         $foreignKey = $this->addColumn($type, $column, $parameters);
         $this->foreign($column)->references($fk_column)->on($fk_table);
+
         return $foreignKey;
     }
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Test\Unit\Database\Schemas;
+namespace Tests\Unit\Database\Schemas;
 
 use App\Database\Schemas\Table;
 use Illuminate\Database\Schema\Blueprint;
@@ -23,7 +23,7 @@ class TableTest extends TestCase
         Schema::dropIfExists($this->table);
     }
 
-    public function testCreateTableWithDefaultColumns(): void
+    public function test_create_table_with_default_columns(): void
     {
         Table::make($this->table, function (Blueprint $table) {
             $table->string('name');
@@ -31,28 +31,28 @@ class TableTest extends TestCase
 
         $this->assertTrue(Schema::hasTable($this->table));
 
-        $columns = collect(DB::select("
+        $columns = collect(DB::select('
             SELECT COLUMN_NAME
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
-        ", [env('DB_DATABASE'), $this->table]))->pluck('COLUMN_NAME');
+        ', [env('DB_DATABASE'), $this->table]))->pluck('COLUMN_NAME');
 
         foreach (
             [
-            'created_at',
-            'updated_at',
-            'created_by',
-            'updated_by',
-            'audit_action',
-            'audit_url',
-            'audit_ip'
+                'created_at',
+                'updated_at',
+                'created_by',
+                'updated_by',
+                'audit_action',
+                'audit_url',
+                'audit_ip',
             ] as $col
         ) {
             $this->assertTrue($columns->contains($col), "Column $col should exist in table");
         }
     }
 
-    public function testEnumerationIntBooleanString(): void
+    public function test_enumeration_int_boolean_string(): void
     {
         Table::make($this->table, function ($table) {
             $table->enumeration('int_col', 'int');
@@ -60,18 +60,18 @@ class TableTest extends TestCase
             $table->enumeration('str_col', 'string');
         });
 
-        $columns = collect(DB::select("
+        $columns = collect(DB::select('
             SELECT COLUMN_NAME, COLUMN_TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
-        ", [env('DB_DATABASE'), $this->table]))->pluck('COLUMN_TYPE', 'COLUMN_NAME');
+        ', [env('DB_DATABASE'), $this->table]))->pluck('COLUMN_TYPE', 'COLUMN_NAME');
 
         $this->assertStringContainsString('int', $columns['int_col']);
         $this->assertStringContainsString('tinyint', $columns['bool_col']);
         $this->assertStringContainsString('varchar', $columns['str_col']);
     }
 
-    public function testEnumerationThrowsExceptionOnInvalidType(): void
+    public function test_enumeration_throws_exception_on_invalid_type(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Type: float not accepted for enumeration');
@@ -81,22 +81,22 @@ class TableTest extends TestCase
         });
     }
 
-    public function testForeignKeyCreatesColumnWithConstraints(): void
+    public function test_foreign_key_creates_column_with_constraints(): void
     {
         Table::make($this->table, function ($table) {
             $table->foreignKey('user_id', 'users', 'id', 'bigInteger');
         });
 
-        $columns = collect(DB::select("
+        $columns = collect(DB::select('
             SELECT COLUMN_NAME, COLUMN_TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
-        ", [env('DB_DATABASE'), $this->table]))->pluck('COLUMN_TYPE', 'COLUMN_NAME');
+        ', [env('DB_DATABASE'), $this->table]))->pluck('COLUMN_TYPE', 'COLUMN_NAME');
 
         $this->assertStringContainsString('bigint', $columns['user_id']);
     }
 
-    public function testForeignKeyThrowsExceptionOnInvalidType(): void
+    public function test_foreign_key_throws_exception_on_invalid_type(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Type: float not accepted for foreign key');
@@ -106,7 +106,7 @@ class TableTest extends TestCase
         });
     }
 
-    public function testRepositoryMethodSingleAndMultiple(): void
+    public function test_repository_method_single_and_multiple(): void
     {
         Table::make('test_repositories', function ($table) {
             $table->bigIncrements('id', false);
@@ -129,22 +129,22 @@ class TableTest extends TestCase
         $this->assertStringContainsString('varchar', $columns['multi_repo']);
     }
 
-    public function testDefaultColumnsAddsDeletedByIfDeletedAtExists(): void
+    public function test_default_columns_adds_deleted_by_if_deleted_at_exists(): void
     {
         Table::make($this->table, function ($table) {
             $table->softDeletes();
         });
 
-        $columns = collect(DB::select("
+        $columns = collect(DB::select('
             SELECT COLUMN_NAME
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
-        ", [env('DB_DATABASE'), $this->table]))->pluck('COLUMN_NAME');
+        ', [env('DB_DATABASE'), $this->table]))->pluck('COLUMN_NAME');
 
         $this->assertTrue($columns->contains('deleted_by'));
     }
 
-    public function testForeignKeyAllTypes(): void
+    public function test_foreign_key_all_types(): void
     {
         Table::make('references', function ($table) {
             $table->bigIncrements('col_integer');
@@ -158,11 +158,11 @@ class TableTest extends TestCase
             $table->foreignKey('col_string', 'references', 'col_string', 'string');
         });
 
-        $columns = collect(DB::select("
+        $columns = collect(DB::select('
             SELECT COLUMN_NAME, COLUMN_TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
-        ", [env('DB_DATABASE'), $this->table]))->pluck('COLUMN_TYPE', 'COLUMN_NAME');
+        ', [env('DB_DATABASE'), $this->table]))->pluck('COLUMN_TYPE', 'COLUMN_NAME');
 
         $this->assertStringContainsString('bigint', $columns['col_integer']);
         $this->assertStringContainsString('uuid', $columns['col_uuid']);

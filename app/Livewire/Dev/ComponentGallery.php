@@ -12,7 +12,7 @@ use Livewire\Component;
     'buttons' => 'Buttons',
     'tags' => 'Tags',
     'badges' => 'Badges',
-    'inputs' => 'Inputs',
+    'inputs' => 'Field (input / select / textarea)',
     'selection' => 'Checkbox / Radio',
     'datepicker' => 'Datepicker',
     'search' => 'Search',
@@ -26,7 +26,6 @@ use Livewire\Component;
     'banner' => 'Banners',
     'empty-state' => 'Empty state',
     'modal' => 'Modal',
-    'contact-form' => 'Contact form',
     'cookies' => 'Cookies banner',
     'email' => 'E-mail layout',
 ]])]

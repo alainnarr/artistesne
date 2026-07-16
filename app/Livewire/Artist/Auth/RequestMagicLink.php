@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Artist\Auth;
 
+use App\Database\Models\User;
 use App\Enums\UserRole;
-use App\Models\User;
 use App\Notifications\ArtistRegistrationAccessNotification;
 use App\Notifications\MagicLinkNotification;
 use Illuminate\Contracts\View\View;
@@ -44,8 +44,8 @@ class RequestMagicLink extends Component
             return;
         }
 
-        $user->notify(new MagicLinkNotification);
         $user->forceFill(['last_magic_link_sent_at' => now()])->save();
+        $user->notify(new MagicLinkNotification);
         $this->sent = true;
     }
 

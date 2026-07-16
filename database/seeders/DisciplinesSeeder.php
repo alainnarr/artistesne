@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Database\Models\Discipline;
-use Illuminate\Database\Seeder;
 use App\Enums\DisciplineType;
+use Illuminate\Database\Seeder;
 
 class DisciplinesSeeder extends Seeder
 {
@@ -17,7 +17,7 @@ class DisciplinesSeeder extends Seeder
             Discipline::firstOrCreate(['code' => $discipline['code']], $discipline);
         }
 
-        $this->command?->info("Disciplines seeded: ".count($disciplines).' discipline(s).');
+        $this->command?->info('Disciplines seeded: '.count($disciplines).' discipline(s).');
     }
 
     public static function getDisciplines(): array
@@ -49,7 +49,7 @@ class DisciplinesSeeder extends Seeder
                     ['code' => 'danseur', 'label' => 'Danseur-euse'],
                     ['code' => 'choregraphe', 'label' => 'Chorégraphe'],
                     ['code' => 'metteur_en_scene', 'label' => 'Metteur-euse en scène'],
-                    ['code' => 'createur_lumière', 'label' => 'Créateur-ice lumière'],
+                    ['code' => 'createur_lumiere', 'label' => 'Créateur-ice lumière'],
                     ['code' => 'dramaturge', 'label' => 'Dramaturge'],
                     ['code' => 'performeur', 'label' => 'Performeur-euse'],
                     ['code' => 'conteur', 'label' => 'Conteur-euse'],
@@ -127,7 +127,7 @@ class DisciplinesSeeder extends Seeder
                 'enum_type' => DisciplineType::SECONDARY->value,
                 'activities' => [
                     ['code' => 'enseignement', 'label' => 'Enseignement / transmission'],
-                    ['code' => 'meditation', 'label' => 'Médiation culturelle'],
+                    ['code' => 'mediation', 'label' => 'Médiation culturelle'],
                     ['code' => 'direction', 'label' => 'Direction artistique'],
                     ['code' => 'recherche', 'label' => 'Recherche artistique'],
                     ['code' => 'curation', 'label' => 'Curation'],
@@ -135,7 +135,7 @@ class DisciplinesSeeder extends Seeder
                     ['code' => 'conseil', 'label' => 'Conseil artistique'],
                     ['code' => 'programmation', 'label' => 'Programmation'],
                     ['code' => 'administration', 'label' => 'Administration culturelle'],
-                    ['code' => 'edition', 'label' => 'Édition et publication']
+                    ['code' => 'edition', 'label' => 'Édition et publication'],
                 ],
             ],
         ];

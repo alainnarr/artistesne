@@ -1,12 +1,14 @@
 <?php
 
-use App\Database\Schemas\Table;
 use App\Database\Schemas\Audit;
+use App\Database\Schemas\Table;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     private string $tableName = 'registrations';
+
     private bool $hasAudit = true;
 
     private function _columns(&$table)
@@ -14,10 +16,10 @@ return new class extends Migration {
         $table->bigIncrements('id');
         $table->string('real_name', 125);
         $table->string('artist_name', 125);
-        $table->string('url', 255);
+        $table->string('slug', 255)->unique();
         $table->date('birth_date');
         $table->string('email', 125)->unique();
-        $table->string('phone', 15);
+        $table->string('phone', 30);
         $table->string('residence_location', 125);
         $table->string('locality', 125)->nullable();
         $table->text('canton_link')->nullable();
@@ -51,7 +53,7 @@ return new class extends Migration {
     {
         Schema::dropIfExists($this->tableName);
         if ($this->hasAudit) {
-            Schema::dropIfExists('_' . $this->tableName);
+            Schema::dropIfExists('_'.$this->tableName);
         }
     }
 };

@@ -138,7 +138,7 @@ an entry in the `$sections` array on the Livewire class.
 | Admin panel    | Filament 5                                                |
 | Styling        | Tailwind CSS **v4** (`@theme` + `@source` in CSS)         |
 | Build / bundle | Vite 8 + `laravel-vite-plugin` + `@tailwindcss/vite`      |
-| Auth           | Laravel Fortify v1 (passkeys, 2FA)                        |
+| Auth           | Magic link (artists) + AD FS via Filament (admins) — no Fortify |
 | Testing        | Pest 4 (Feature + Browser)                                |
 | Container      | Laravel Sail (Docker) — **all commands prefix `vendor/bin/sail`** |
 

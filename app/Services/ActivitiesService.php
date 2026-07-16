@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -7,10 +8,16 @@ use App\Database\Models\Registration;
 use App\Database\Models\ActivityArtist;
 use App\Database\Models\ActivityRegistration;
 
+
 class ActivitiesService
 {
     /**
-     * Method for managing Many-to-Many relationships that can be tracked by the audit system.
+      * Attach multiple activities to a registration by creating ActivityRegistration pivot rows.
+     *
+     * We do NOT use Eloquent's attach() because it bypasses model events and
+     * therefore the Auditable trait would not record the inserts.
+     *
+     * @param  array<int, int>  $activityIds
      */
     public function attach(Registration|Artist $owner, int $activityId): ActivityRegistration|ActivityArtist
     {
@@ -64,6 +71,11 @@ class ActivitiesService
         return $deleted;
     }
 
+    /**
+     * Sync activities on a registration
+     *
+     * @param  array<int, int>  $activityIds
+     */
     public function sync(Registration|Artist $owner, array $activityIds): void
     {
         $currentActivityIds = match (true) {
