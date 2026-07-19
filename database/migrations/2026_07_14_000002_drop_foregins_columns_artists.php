@@ -11,7 +11,10 @@ return new class extends Migration {
     {
         Schema::table($this->tableName, function (Blueprint $table) {
             $table->dropForeign(['user_id']);
+            $table->dropIndex('newartists_user_id_foreign');
+
             $table->dropForeign(['rep_image']);
+            $table->dropIndex('newartists_rep_image_foreign');
             $table->dropColumn(['rep_image']);
         });
     }
@@ -19,8 +22,9 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table($this->tableName, function (Blueprint $table) {
-            $table->unsignedBigInteger('rep_image')->nullable();
             $table->foreign('user_id')->references('id')->on('users');
+
+            $table->unsignedBigInteger('rep_image')->nullable();
             $table->foreign('rep_image')->references('id')->on('repositories');
         });
     }
