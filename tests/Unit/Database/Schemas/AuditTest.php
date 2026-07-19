@@ -1,6 +1,6 @@
 <?php
 
-namespace Test\Unit\Database\Schemas;
+namespace Tests\Unit\Database\Schemas;
 
 use App\Database\Schemas\Audit;
 use Illuminate\Database\Schema\Blueprint;
@@ -14,6 +14,7 @@ class AuditTest extends TestCase
     use RefreshDatabase;
 
     private string $table = 'example';
+
     private string $auditTable = '_example';
 
     protected function setUp(): void
@@ -22,7 +23,7 @@ class AuditTest extends TestCase
         Schema::dropIfExists($this->auditTable);
     }
 
-    public function testCreatesAuditTableWithPrefix()
+    public function test_creates_audit_table_with_prefix()
     {
         Audit::make($this->table, function (Blueprint $table) {
             $table->string('name');
@@ -30,18 +31,18 @@ class AuditTest extends TestCase
         $this->assertTrue(Schema::hasTable($this->auditTable));
     }
 
-    public function testAllColumnsBecomeNullable(): void
+    public function test_all_columns_become_nullable(): void
     {
         Audit::make($this->table, function (Blueprint $table) {
             $table->string('name');
             $table->integer('age');
         });
 
-        $columns = DB::select("
+        $columns = DB::select('
             SELECT COLUMN_NAME, IS_NULLABLE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
-        ", [env('DB_DATABASE'), $this->auditTable]);
+        ', [env('DB_DATABASE'), $this->auditTable]);
 
         foreach ($columns as $col) {
             if ($col->COLUMN_NAME === '_id') {
@@ -52,17 +53,17 @@ class AuditTest extends TestCase
         }
     }
 
-    public function testOnlyInternalIdIsAutoincrement()
+    public function test_only_internal_id_is_autoincrement()
     {
         Audit::make($this->table, function (Blueprint $table) {
             $table->bigIncrements('id');
         });
 
-        $columns = DB::select("
+        $columns = DB::select('
             SELECT COLUMN_NAME, EXTRA
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
-        ", [env('DB_DATABASE'), $this->auditTable]);
+        ', [env('DB_DATABASE'), $this->auditTable]);
 
         $extras = collect($columns)->pluck('EXTRA', 'COLUMN_NAME');
 
@@ -70,7 +71,7 @@ class AuditTest extends TestCase
         $this->assertNotEquals('auto_increment', $extras['id'] ?? '', 'id should NOT be autoincrement');
     }
 
-    public function testUniqueConstraintsAreRemoved(): void
+    public function test_unique_constraints_are_removed(): void
     {
         Audit::make($this->table, function (Blueprint $table) {
             $table->string('code')->unique();
@@ -92,7 +93,7 @@ class AuditTest extends TestCase
         }
     }
 
-    public function testNoForeignAreCreated(): void
+    public function test_no_foreign_are_created(): void
     {
         Audit::make($this->table, function (Blueprint $table) {
             $table->foreignId('user_id');
@@ -100,16 +101,16 @@ class AuditTest extends TestCase
             $table->foreign('whatever');
         });
 
-        $fks = DB::select("
+        $fks = DB::select('
             SELECT CONSTRAINT_NAME
             FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL
-        ", [env('DB_DATABASE'), $this->auditTable]);
+        ', [env('DB_DATABASE'), $this->auditTable]);
 
-        $this->assertEmpty($fks, "Audit table should have no foreign keys");
+        $this->assertEmpty($fks, 'Audit table should have no foreign keys');
     }
 
-    public function testNoForeignKeysAreCreated(): void
+    public function test_no_foreign_keys_are_created(): void
     {
         Audit::make($this->table, function (Blueprint $table) {
             $table->foreignKey('int_column', 'fk_table', 'fk_int_column', 'integer');
@@ -117,104 +118,104 @@ class AuditTest extends TestCase
             $table->foreignKey('string_column', 'fk_table', 'fk_int_column', 'string');
         });
 
-        $fks = DB::select("
+        $fks = DB::select('
             SELECT CONSTRAINT_NAME
             FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL
-        ", [env('DB_DATABASE'), $this->auditTable]);
+        ', [env('DB_DATABASE'), $this->auditTable]);
 
-        $this->assertEmpty($fks, "Audit table should have no foreign keys");
+        $this->assertEmpty($fks, 'Audit table should have no foreign keys');
     }
 
-    public function testForeignIdBecomesUnsignedBigintWithoutConstraint(): void
+    public function test_foreign_id_becomes_unsigned_bigint_without_constraint(): void
     {
         Audit::make($this->table, function (Blueprint $table) {
             $table->foreignId('user_id');
         });
 
-        $col = DB::selectOne("
+        $col = DB::selectOne('
             SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
-        ", [env('DB_DATABASE'), $this->auditTable, 'user_id']);
+        ', [env('DB_DATABASE'), $this->auditTable, 'user_id']);
 
         $this->assertStringContainsString('bigint', $col->COLUMN_TYPE);
         $this->assertStringContainsString('unsigned', $col->COLUMN_TYPE);
     }
 
-    public function testForeignUuidBecomesUuidColumn(): void
+    public function test_foreign_uuid_becomes_uuid_column(): void
     {
         Audit::make($this->table, function (Blueprint $table) {
             $table->foreignUuid('fk_uuid');
         });
 
-        $col = DB::selectOne("
+        $col = DB::selectOne('
             SELECT COLUMN_NAME, COLUMN_TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
-        ", [env('DB_DATABASE'), $this->auditTable, 'fk_uuid']);
+        ', [env('DB_DATABASE'), $this->auditTable, 'fk_uuid']);
 
         $this->assertEquals('uuid', $col->COLUMN_TYPE);
     }
 
-    public function testForeignKeyMethodCreatesSimpleColumns(): void
+    public function test_foreign_key_method_creates_simple_columns(): void
     {
         Audit::make($this->table, function (Blueprint $table) {
             $table->foreignKey('repo', 'repositories', 'code', 'string', 100);
         });
 
-        $col = DB::selectOne("
+        $col = DB::selectOne('
             SELECT COLUMN_NAME, COLUMN_TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
-        ", [env('DB_DATABASE'), $this->auditTable, 'repo']);
+        ', [env('DB_DATABASE'), $this->auditTable, 'repo']);
 
         $this->assertStringContainsString('varchar(100)', $col->COLUMN_TYPE);
     }
 
-    public function testRepositoryMethodCreatesSimpleColumnsWithoutFk(): void
+    public function test_repository_method_creates_simple_columns_without_fk(): void
     {
         Audit::make($this->table, function (Blueprint $table) {
             $table->repository('repo_id', false);
             $table->repository('repo_code', true);
         });
 
-        $repoId = DB::selectOne("
+        $repoId = DB::selectOne('
             SELECT COLUMN_NAME, COLUMN_TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
-        ", [env('DB_DATABASE'), $this->auditTable, 'repo_id']);
-        $repoCode = DB::selectOne("
+        ', [env('DB_DATABASE'), $this->auditTable, 'repo_id']);
+        $repoCode = DB::selectOne('
             SELECT COLUMN_NAME, COLUMN_TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
-        ", [env('DB_DATABASE'), $this->auditTable, 'repo_code']);
+        ', [env('DB_DATABASE'), $this->auditTable, 'repo_code']);
 
         $this->assertStringContainsString('bigint', $repoId->COLUMN_TYPE);
         $this->assertStringContainsString('varchar', $repoCode->COLUMN_TYPE);
 
-        $fks = DB::select("
+        $fks = DB::select('
             SELECT CONSTRAINT_NAME
             FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL
-        ", [env('DB_DATABASE'), $this->auditTable]);
+        ', [env('DB_DATABASE'), $this->auditTable]);
 
         $this->assertEmpty($fks);
     }
 
-    public function testEnumerationIntBooleanString(): void
+    public function test_enumeration_int_boolean_string(): void
     {
         Audit::make($this->table, function ($table) {
-            $table->enumeration('int_col', 'integer');
+            $table->enumeration('int_col', 'int');
             $table->enumeration('bool_col', 'boolean');
             $table->enumeration('str_col', 'string');
         });
 
-        $columns = DB::select("
+        $columns = DB::select('
             SELECT COLUMN_NAME, COLUMN_TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
-        ", [env('DB_DATABASE'), $this->auditTable]);
+        ', [env('DB_DATABASE'), $this->auditTable]);
 
         $types = collect($columns)->pluck('COLUMN_TYPE', 'COLUMN_NAME');
 
@@ -223,7 +224,7 @@ class AuditTest extends TestCase
         $this->assertStringContainsString('varchar', $types['str_col']);
     }
 
-    public function testEnumerationThrowsExceptionOnInvalidType(): void
+    public function test_enumeration_throws_exception_on_invalid_type(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Type: float not accepted for enumeration');
@@ -233,7 +234,7 @@ class AuditTest extends TestCase
         });
     }
 
-    public function testForeignKeyThrowsExceptionOnInvalidType(): void
+    public function test_foreign_key_throws_exception_on_invalid_type(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Type: text not accepted for foreign key');
@@ -243,46 +244,48 @@ class AuditTest extends TestCase
         });
     }
 
-    public function testForeignUlidCreatesColumn(): void
+    public function test_foreign_ulid_creates_column(): void
     {
         Audit::make($this->table, function ($table) {
             $table->foreignUlid('ulid_col');
         });
 
-        $col = DB::selectOne("
+        $col = DB::selectOne('
         SELECT COLUMN_NAME, COLUMN_TYPE
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
-    ", [env('DB_DATABASE'), $this->auditTable, 'ulid_col']);
+    ', [env('DB_DATABASE'), $this->auditTable, 'ulid_col']);
 
         $this->assertStringContainsString('char', $col->COLUMN_TYPE);
     }
 
-    public function testIdCreatesUnsignedBigint(): void
+    public function test_id_creates_unsigned_bigint(): void
     {
         Audit::make($this->table, function ($table) {
             $table->id('custom_id');
         });
 
-        $col = DB::selectOne("
+        $col = DB::selectOne('
         SELECT COLUMN_NAME, COLUMN_TYPE
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
-    ", [env('DB_DATABASE'), $this->auditTable, 'custom_id']);
+    ', [env('DB_DATABASE'), $this->auditTable, 'custom_id']);
 
         $this->assertStringContainsString('bigint', $col->COLUMN_TYPE);
         $this->assertStringContainsString('unsigned', $col->COLUMN_TYPE);
     }
 
-    public function testForeignIdForReturnsNull(): void
+    public function test_foreign_id_for_throws_for_invalid_model(): void
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('foreignIdFor expects an Eloquent Model class or instance.');
+
         Audit::make($this->table, function ($table) {
-            $result = $table->foreignIdFor(\stdClass::class, 'user_uuid');
-            $this->assertNull($result);
+            $table->foreignIdFor(\stdClass::class, 'user_uuid');
         });
     }
 
-    public function testRepositoryMultipleTrueAndFalse(): void
+    public function test_repository_multiple_true_and_false(): void
     {
         Audit::make($this->table, function ($table) {
             $table->repository('single_repo', false);

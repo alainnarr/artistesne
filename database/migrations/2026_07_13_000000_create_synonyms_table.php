@@ -14,6 +14,8 @@ return new class extends Migration {
         $table->bigIncrements('id');
         $table->foreignKey('activity_id', 'activities', 'id', 'bigInteger');
         $table->string('label', 125);
+
+        $table->index('label');
     }
 
     public function up(): void

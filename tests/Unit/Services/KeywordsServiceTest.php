@@ -94,4 +94,41 @@ class KeywordsServiceTest extends TestCase
         $this->assertDatabaseMissing('keywords', ['id' => $keyword->id]);
         $this->assertDatabaseCount('keywords_artists', 0);
     }
+
+    public function testSyncAttachesNewKeywords(): void
+    {
+        $artist = $this->makeArtist();
+        $this->service->sync($artist, ['Rock', 'Jazz']);
+
+        $this->assertDatabaseHas('keywords', ['label' => 'rock']);
+        $this->assertDatabaseHas('keywords', ['label' => 'jazz']);
+        $this->assertDatabaseCount('keywords_artists', 2);
+    }
+
+    public function testSyncDetachesRemovedKeywords(): void
+    {
+        $artist = $this->makeArtist();
+        $this->service->attachMultiple($artist, ['Rock', 'Jazz']);
+        $this->service->sync($artist, ['Rock']);
+
+        $this->assertDatabaseHas('keywords', ['label' => 'rock']);
+        $this->assertDatabaseMissing('keywords_artists',
+            [
+                'artist_id' => $artist->id,
+                'keyword_id' => Keyword::where('label', 'jazz')->first()->id,
+            ]
+        );
+        $this->assertDatabaseCount('keywords_artists', 1);
+    }
+
+    public function testSyncNormalizesLabelsAndRemovesDuplicates(): void
+    {
+        $artist = $this->makeArtist();
+        $this->service->sync($artist, ['ROCK', 'rock', 'Jazz']);
+
+        $this->assertDatabaseHas('keywords', ['label' => 'rock']);
+        $this->assertDatabaseHas('keywords', ['label' => 'jazz']);
+        $this->assertEquals(2, Keyword::count());
+        $this->assertEquals(2, KeywordArtist::count());
+    }
 }

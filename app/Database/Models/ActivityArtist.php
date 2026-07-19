@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Database\Models;
 
 use App\Database\Model;
@@ -18,6 +20,7 @@ class ActivityArtist extends Model
     ];
 
     /* * * * * * * * VALIDATION * * * * * * * */
+    /** @return array<string, string|array> */
     public static function getRules(array $fields = [], $register = null): array
     {
         $rules = [
@@ -34,12 +37,14 @@ class ActivityArtist extends Model
     /* * * * * * * * END - VALIDATION * * * * * * * */
 
     /* * * * * * * * RELATIONS * * * * * * * */
+    /** @return BelongsTo<Activity, $this> */
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class, 'activity_id');
     }
 
-    public function artists(): BelongsTo
+    /** @return BelongsTo<Artist, $this> */
+    public function artist(): BelongsTo
     {
         return $this->belongsTo(Artist::class, 'artist_id');
     }

@@ -2,13 +2,14 @@
 
 namespace App\Notifications;
 
-use App\Enums\ApprovalStatus;
-use App\Models\ArtistChangeRequest;
+use App\Database\Models\ArtistChangeRequest;
+use App\Enums\ArtistChangeRequestStatus;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class ChangeRequestDecisionNotification extends Notification
+class ChangeRequestDecisionNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -28,16 +29,16 @@ class ChangeRequestDecisionNotification extends Notification
         $notes = $this->changeRequest->review_notes;
 
         $subject = match ($status) {
-            ApprovalStatus::Approved => 'Votre modification a été approuvée',
-            ApprovalStatus::Rejected => 'Votre demande de modification a été refusée',
-            ApprovalStatus::ChangesRequested => 'Des ajustements sont demandés pour votre modification',
+            ArtistChangeRequestStatus::APPROVED => 'Votre modification a été approuvée',
+            ArtistChangeRequestStatus::REJECTED => 'Votre demande de modification a été refusée',
+            ArtistChangeRequestStatus::CHANGES_REQUESTED => 'Des ajustements sont demandés pour votre modification',
             default => 'Mise à jour de votre demande de modification',
         };
 
         $intro = match ($status) {
-            ApprovalStatus::Approved => 'Bonne nouvelle ! Votre demande de modification a été **approuvée** et votre page a été mise à jour.',
-            ApprovalStatus::Rejected => 'Votre demande de modification a été **refusée**.',
-            ApprovalStatus::ChangesRequested => 'Des ajustements sont nécessaires avant de pouvoir approuver votre modification.',
+            ArtistChangeRequestStatus::APPROVED => 'Bonne nouvelle ! Votre demande de modification a été **approuvée** et votre page a été mise à jour.',
+            ArtistChangeRequestStatus::REJECTED => 'Votre demande de modification a été **refusée**.',
+            ArtistChangeRequestStatus::CHANGES_REQUESTED => 'Des ajustements sont nécessaires avant de pouvoir approuver votre modification.',
             default => 'Votre demande de modification a été traitée.',
         };
 
@@ -50,9 +51,9 @@ class ChangeRequestDecisionNotification extends Notification
             $message->line('**Message de l\'administrateur :** '.$notes);
         }
 
-        if ($status === ApprovalStatus::ChangesRequested) {
-            $message->action('Modifier ma page', route('artist.profile.edit'));
-        } elseif ($status === ApprovalStatus::Approved) {
+        if ($status === ArtistChangeRequestStatus::CHANGES_REQUESTED) {
+            $message->action('Modifier ma page', route('artist.profile-edit'));
+        } elseif ($status === ArtistChangeRequestStatus::APPROVED) {
             $message->action('Voir ma page', route('public.artist.show', $this->changeRequest->artist));
         }
 

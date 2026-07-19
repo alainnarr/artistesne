@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Database\Models\Artist;
 use App\Enums\ArtistStatus;
-use App\Models\Artist;
 use App\Notifications\SemiannualReminderNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\URL;
@@ -20,7 +20,7 @@ class SendSemiannualReminders extends Command
         $cutoff = now()->subMonths(6);
 
         $artists = Artist::query()
-            ->where('status', ArtistStatus::Published)
+            ->where('enum_status', ArtistStatus::PUBLISHED->value)
             ->where(function ($q) use ($cutoff) {
                 $q->whereNull('last_confirmed_at')
                     ->orWhere('last_confirmed_at', '<', $cutoff);
@@ -39,7 +39,7 @@ class SendSemiannualReminders extends Command
 
         if ($this->option('dry-run')) {
             $this->table(['ID', 'Name', 'Last confirmed'], $artists->map(fn ($a) => [
-                $a->id, $a->name, $a->last_confirmed_at?->toDateString() ?? 'never',
+                $a->id, $a->artist_name, $a->last_confirmed_at?->toDateString() ?? 'never',
             ]));
 
             return self::SUCCESS;

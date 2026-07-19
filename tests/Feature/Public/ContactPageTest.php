@@ -4,9 +4,10 @@ use App\Livewire\Public\Contact;
 use Livewire\Livewire;
 
 it('renders the public contact page', function () {
-    $this->get(route('contact'))
+    $this->get(route('public.contact'))
         ->assertOk()
-        ->assertSee('Nous contacter')
+        ->assertSee('Nous')
+        ->assertSee('contacter')
         ->assertSee('Formulaire de contact');
 });
 

@@ -2,8 +2,9 @@
 
 namespace App\Livewire\Public;
 
-use App\Models\Artist;
-use App\Models\TaxonomyTerm;
+use App\Database\Models\Activity;
+use App\Database\Models\Artist;
+use App\Database\Models\Discipline;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
@@ -40,9 +41,9 @@ class Home extends Component
     /**
      * @return array<string, array<int, string>> Grouped suggestions keyed by category label.
      *
-     * Ordered by discovery priority (tags → domains → artist names), matching
-     * the full listing page, so exploring artistic domains is favored over
-     * searching for a specific artist by name.
+     * Ordered by discovery priority (domains → activities → artist names),
+     * matching the full listing page, so exploring artistic domains is
+     * favored over searching for a specific artist by name.
      */
     #[Computed]
     public function suggestions(): array
@@ -54,46 +55,31 @@ class Home extends Component
 
         $groups = [];
 
-        $keywords = TaxonomyTerm::query()
-            ->where('type', 'keywords')
-            ->where('name', 'like', "%{$q}%")
-            ->orderBy('name')
-            ->take(5)
-            ->pluck('name')
-            ->all();
-        if (! empty($keywords)) {
-            $groups['Mots-clés'] = $keywords;
-        }
-
-        $domains = TaxonomyTerm::query()
-            ->where('type', 'domain')
-            ->where('name', 'like', "%{$q}%")
-            ->orderBy('position')
+        $domains = Discipline::where('label', 'like', "%{$q}%")
+            ->orderBy('label')
             ->take(3)
-            ->pluck('name')
+            ->pluck('label')
             ->all();
         if (! empty($domains)) {
             $groups['Domaines'] = $domains;
         }
 
-        $activities = TaxonomyTerm::query()
-            ->where('type', 'main_activities')
-            ->where('name', 'like', "%{$q}%")
+        $activities = Activity::where('label', 'like', "%{$q}%")
             ->distinct()
-            ->orderBy('name')
+            ->orderBy('label')
             ->take(5)
-            ->pluck('name')
+            ->pluck('label')
             ->all();
         if (! empty($activities)) {
             $groups['Activités'] = $activities;
         }
 
         $artists = Artist::search($q)
-            ->options(['attributesToSearchOn' => ['name']])
-            ->query(fn ($query) => $query->select('id', 'name'))
+            ->options(['attributesToSearchOn' => ['artist_name']])
+            ->query(fn ($query) => $query->select('id', 'artist_name'))
             ->take(5)
             ->get()
-            ->pluck('name')
+            ->pluck('artist_name')
             ->all();
         if (! empty($artists)) {
             $groups['Artistes'] = $artists;
@@ -109,7 +95,7 @@ class Home extends Component
         $total = (clone $query)->count();
 
         $query = match ($this->sort) {
-            'name' => $query->orderBy('name'),
+            'name' => $query->orderBy('artist_name'),
             default => $query->inRandomOrder(),
         };
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Database\Models;
 
 use App\Database\Model;
@@ -18,6 +20,7 @@ class KeywordArtist extends Model
     ];
 
     /* * * * * * * * VALIDATION * * * * * * * */
+    /** @return array<string, string|array> */
     public static function getRules(array $fields = [], $register = null): array
     {
         $rules = [
@@ -34,11 +37,13 @@ class KeywordArtist extends Model
     /* * * * * * * * END - VALIDATION * * * * * * * */
 
     /* * * * * * * * RELATIONS * * * * * * * */
+    /** @return BelongsTo<Keyword, $this> */
     public function keyword(): BelongsTo
     {
         return $this->belongsTo(Keyword::class, 'keyword_id');
     }
 
+    /** @return BelongsTo<Artist, $this> */
     public function artist(): BelongsTo
     {
         return $this->belongsTo(Artist::class, 'artist_id');

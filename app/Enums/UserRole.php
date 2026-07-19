@@ -4,14 +4,14 @@ namespace App\Enums;
 
 enum UserRole: string
 {
-    case Admin = 'admin';
-    case Artist = 'artist';
+    case ADMIN = 'admin';
+    case ARTIST = 'artist';
 
     public function label(): string
     {
         return match ($this) {
-            self::Admin => 'Administrateur',
-            self::Artist => 'Artiste',
+            self::ADMIN => 'Administrateur',
+            self::ARTIST => 'Artiste',
         };
     }
 }

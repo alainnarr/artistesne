@@ -2,12 +2,12 @@
 
 namespace Tests\Unit\Database\Traits;
 
+use App\Database\Schemas\Table;
 use App\Database\Traits\PreventDelete;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use App\Database\Schemas\Table;
 use Tests\TestCase;
 
 class PreventDeleteTest extends TestCase
@@ -25,7 +25,8 @@ class PreventDeleteTest extends TestCase
 
     protected function getModel()
     {
-        return new class extends Model {
+        return new class extends Model
+        {
             use PreventDelete;
 
             protected $table = 'prevent_delete_test';
@@ -36,13 +37,13 @@ class PreventDeleteTest extends TestCase
         };
     }
 
-    public function testCreateIsAllowed(): void
+    public function test_create_is_allowed(): void
     {
         $model = $this->getModel()->create(['name' => 'Created']);
         $this->assertEquals('Created', $model->name);
     }
 
-    public function testDeleteThrowsException(): void
+    public function test_delete_throws_exception(): void
     {
         $model = $this->getModel()->create(['name' => 'ToDelete']);
 
@@ -52,7 +53,7 @@ class PreventDeleteTest extends TestCase
         $model->delete();
     }
 
-    public function testForceDeleteThrowsException(): void
+    public function test_force_delete_throws_exception(): void
     {
         $model = $this->getModel()->create(['name' => 'ToDelete']);
 

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Database\Models\Artist;
 use App\Database\Models\ArtistChangeRequest;
 use App\Enums\ArtistChangeRequestStatus;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -20,20 +21,7 @@ class ArtistChangeRequestsService
     {
         $payload = [];
 
-        $ignoredFields = [
-            'registration_id',
-            'user_id',
-            'enum_status',
-            'published_at',
-            'confirmed_at',
-            'reminded_at',
-            'rep_image',
-        ];
-
-        $fields = array_diff(
-            $artist->getFillable(),
-            $ignoredFields
-        );
+        $fields = $artist->getUpdatable();
 
         foreach ($fields as $field) {
             if (!array_key_exists($field, $data)) {
@@ -43,6 +31,9 @@ class ArtistChangeRequestsService
                 $payload[$field] = $data[$field];
             }
         }
+
+        // Validate if the changes will be accepted by the Artist model
+        Validator::make($payload, Artist::getRules(array_keys($payload)))->validate();
 
         if (!empty($data['image'])) {
             $payload['image'] = true;
@@ -64,17 +55,19 @@ class ArtistChangeRequestsService
             throw new RuntimeException('No changes detected for artist with ID: ' . $artist->id);
         }
 
-        return DB::transaction(function () use ($artist, $payload, $data) {
+        $changeRequestData = [
+            'artist_id' => $artist->id,
+            'payload' => json_encode($payload),
+            'enum_status' => ArtistChangeRequestStatus::PENDING,
+        ];
+
+        return DB::transaction(function () use ($artist, $changeRequestData, $data) {
             ArtistChangeRequest::query()
                 ->where('artist_id', $artist->id)
                 ->where('enum_status', ArtistChangeRequestStatus::CHANGES_REQUESTED)
                 ->delete();
 
-            $artistChangeRequest = ArtistChangeRequest::create([
-                'artist_id' => $artist->id,
-                'payload' => json_encode($payload),
-                'enum_status' => ArtistChangeRequestStatus::PENDING,
-            ]);
+            $artistChangeRequest = ArtistChangeRequest::create($changeRequestData);
 
             if (!empty($data['image'])) {
                 $this->repositoryService->create($artistChangeRequest, $data['image']);
@@ -154,19 +147,20 @@ class ArtistChangeRequestsService
         ArtistChangeRequestStatus $status,
         ?string $reviewNotes = null
     ): ArtistChangeRequest {
-        $reviewer = Auth::user();
-
-        return DB::transaction(function () use ($changeRequest, $status, $reviewNotes, $reviewer) {
-            $changeRequest->update([
-                'enum_status' => $status,
-                'reviewed_at' => now(),
-                'reviewed_by' => $reviewer?->id,
-                'review_notes' => $reviewNotes,
-            ]);
-
+        return DB::transaction(function () use ($changeRequest, $status, $reviewNotes) {
             if ($status === ArtistChangeRequestStatus::APPROVED) {
                 $this->artistsService->update($changeRequest->artist, $changeRequest);
             }
+
+            $reviewer = Auth::user();
+            $changeRequest->update([
+                'enum_status' => $status,
+                'reviewed_at' => now(),
+                'reviewed_by' => $reviewer?->id ?? null,
+                'review_notes' => $reviewNotes,
+            ]);
+
+
 
             return $changeRequest->fresh();
         });

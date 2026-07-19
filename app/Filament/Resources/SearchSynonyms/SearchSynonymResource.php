@@ -2,12 +2,12 @@
 
 namespace App\Filament\Resources\SearchSynonyms;
 
+use App\Database\Models\SearchSynonym;
 use App\Filament\Resources\SearchSynonyms\Pages\CreateSearchSynonym;
 use App\Filament\Resources\SearchSynonyms\Pages\EditSearchSynonym;
 use App\Filament\Resources\SearchSynonyms\Pages\ListSearchSynonyms;
 use App\Filament\Resources\SearchSynonyms\Schemas\SearchSynonymForm;
 use App\Filament\Resources\SearchSynonyms\Tables\SearchSynonymsTable;
-use App\Models\SearchSynonym;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;

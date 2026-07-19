@@ -19,13 +19,13 @@
     {{-- Header — Figma 561:49043 (desktop) / 561:49069 (tablet) / 561:49095 (mobile) --}}
     <header class="bg-brand text-brand-paper">
         <div class="mx-auto flex w-full max-w-[1280px] items-center justify-between px-4 py-4 sm:px-20 sm:py-6">
-            <a href="{{ route('home') }}" class="inline-flex items-center text-brand-paper" aria-label="Artistes.ne" wire:navigate>
+            <a href="{{ route('public.home') }}" class="inline-flex items-center text-brand-paper" aria-label="Artistes.ne" wire:navigate>
                 <x-picto name="artistes-ne" set="logos" class="h-[15px] w-auto sm:h-[25px]" />
             </a>
             <nav class="flex items-center gap-4 sm:gap-12">
                 <a
-                    href="{{ route('about') }}"
-                    class="text-base leading-[26px] sm:text-lg sm:leading-[30px] {{ request()->routeIs('about') ? 'border-b-[1.5px] border-brand-mint pb-0.5 text-brand-paper' : 'text-brand-paper transition hover:opacity-80' }}"
+                    href="{{ route('public.about') }}"
+                    class="text-base leading-[26px] sm:text-lg sm:leading-[30px] {{ request()->routeIs('public.about') ? 'border-b-[1.5px] border-brand-mint pb-0.5 text-brand-paper' : 'text-brand-paper transition hover:opacity-80' }}"
                     wire:navigate
                 >À propos</a>
                 <a
@@ -49,11 +49,11 @@
             <div class="flex flex-wrap items-center justify-center gap-2">
                 <span class="font-medium">© SCNE {{ now()->year }}</span>
                 <span aria-hidden="true">|</span>
-                <a href="{{ route('conditions') }}" class="underline underline-offset-2 hover:no-underline" wire:navigate>Conditions d'utilisation</a>
+                <a href="{{ route('public.conditions') }}" class="underline underline-offset-2 hover:no-underline" wire:navigate>Conditions d'utilisation</a>
                 <span aria-hidden="true">|</span>
-                <a href="{{ route('conditions') }}#protection-des-donnees" class="underline underline-offset-2 hover:no-underline" wire:navigate>Protection des données</a>
+                <a href="{{ route('public.privacy') }}" class="underline underline-offset-2 hover:no-underline" wire:navigate>Protection des données</a>
                 <span aria-hidden="true">|</span>
-                <a href="{{ route('contact') }}" class="underline underline-offset-2 hover:no-underline" wire:navigate>Contact</a>
+                <a href="{{ route('public.contact') }}" class="underline underline-offset-2 hover:no-underline" wire:navigate>Contact</a>
             </div>
             <div class="flex items-center gap-6 text-brand">
                 <a href="https://www.facebook.com/" target="_blank" rel="noopener" aria-label="Facebook" class="transition hover:opacity-70">
@@ -66,7 +66,7 @@
         </div>
     </footer>
 
-    <x-ds.cookies-banner :link-href="route('about')" />
+    <x-ds.cookies-banner :link-href="route('public.about')" />
 
     @fluxScripts
     @stack('scripts')

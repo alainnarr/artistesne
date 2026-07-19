@@ -26,7 +26,7 @@
         <div class="flex flex-col items-center gap-6 text-center">
             <p class="font-serif text-6xl font-bold text-brand-hairline">{{ $code }}</p>
             <a
-                href="{{ route('home') }}"
+                href="{{ route('public.home') }}"
                 class="inline-flex items-center gap-2 rounded-none bg-brand-mint px-5 py-3 text-base font-medium text-brand transition-colors hover:bg-brand-mint-hover"
                 wire:navigate
             >

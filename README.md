@@ -18,7 +18,6 @@ Application Laravel pour présenter les artistes du canton de Neuchâtel, permet
 - Filament 5
 - Flux UI
 - Tailwind CSS 4
-- Fortify authentication
 
 ## Requirements
 

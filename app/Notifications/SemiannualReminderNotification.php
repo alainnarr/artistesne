@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -11,8 +13,10 @@ use Illuminate\Notifications\Notification;
  *   - "Mon profil est à jour"       → marks confirmed, no edit needed
  *   - "Mettre à jour mon profil"    → marks confirmed + opens edit form
  */
-class SemiannualReminderNotification extends Notification
+class SemiannualReminderNotification extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     public function __construct(
         public string $confirmUrl,
         public string $updateUrl,
@@ -35,8 +39,7 @@ class SemiannualReminderNotification extends Notification
             ->line('Il est temps de vérifier que votre profil sur la plateforme Artistes.ne est encore à jour.')
             ->line('Si vous ne prenez aucune action dans **'.$this->daysUntilDisable.' jours**, votre profil sera automatiquement désactivé et ne sera plus visible du public.')
             ->action('Oui, mon profil est à jour', $this->confirmUrl)
-            ->line('Si vous souhaitez apporter des modifications avant de confirmer :')
-            ->action('Mettre à jour mon profil', $this->updateUrl)
+            ->line('Si vous souhaitez apporter des modifications avant de confirmer, utilisez plutôt le lien suivant : '.$this->updateUrl)
             ->line('Merci de maintenir votre profil à jour pour garantir la qualité de l\'annuaire.');
     }
 }

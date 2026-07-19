@@ -7,53 +7,53 @@ use PHPUnit\Framework\TestCase;
 
 class ArtistStatusTest extends TestCase
 {
-    public function testDraftLabel(): void
+    public function test_draft_label(): void
     {
-        $this->assertEquals('Brouillon', ArtistStatus::Draft->label());
+        $this->assertEquals('Brouillon', ArtistStatus::DRAFT->label());
     }
 
-    public function testPublishedLabel(): void
+    public function test_published_label(): void
     {
-        $this->assertEquals('Publié', ArtistStatus::Published->label());
+        $this->assertEquals('Publié', ArtistStatus::PUBLISHED->label());
     }
 
-    public function testDraftColor(): void
+    public function test_draft_color(): void
     {
-        $this->assertEquals('gray', ArtistStatus::Draft->color());
+        $this->assertEquals('gray', ArtistStatus::DRAFT->color());
     }
 
-    public function testPublishedColor(): void
+    public function test_published_color(): void
     {
-        $this->assertEquals('success', ArtistStatus::Published->color());
+        $this->assertEquals('success', ArtistStatus::PUBLISHED->color());
     }
 
-    public function testDraftValue(): void
+    public function test_draft_value(): void
     {
-        $this->assertEquals('draft', ArtistStatus::Draft->value);
+        $this->assertEquals('draft', ArtistStatus::DRAFT->value);
     }
 
-    public function testPublishedValue(): void
+    public function test_published_value(): void
     {
-        $this->assertEquals('published', ArtistStatus::Published->value);
+        $this->assertEquals('published', ArtistStatus::PUBLISHED->value);
     }
 
-    public function testFromDraftValue(): void
+    public function test_from_draft_value(): void
     {
         $this->assertEquals(
-            ArtistStatus::Draft,
+            ArtistStatus::DRAFT,
             ArtistStatus::from('draft')
         );
     }
 
-    public function testFromPublishedValue(): void
+    public function test_from_published_value(): void
     {
         $this->assertEquals(
-            ArtistStatus::Published,
+            ArtistStatus::PUBLISHED,
             ArtistStatus::from('published')
         );
     }
 
-    public function testTryFromReturnsNullForInvalidValue(): void
+    public function test_try_from_returns_null_for_invalid_value(): void
     {
         $this->assertNull(ArtistStatus::tryFrom('invalid'));
     }

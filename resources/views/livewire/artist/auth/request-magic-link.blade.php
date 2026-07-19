@@ -17,6 +17,15 @@
         <div class="mx-auto w-full max-w-[928px] bg-brand-paper p-6 sm:p-12 lg:p-16">
             <div class="flex flex-col gap-12 sm:gap-14">
 
+                @if (session('error'))
+                    <div class="flex items-start gap-4 border-l-4 border-red-500 bg-red-50 p-5">
+                        <div>
+                            <h2 class="font-serif text-lg font-bold text-brand">Lien de connexion invalide</h2>
+                            <p class="mt-1 text-base text-brand-muted">{{ session('error') }}</p>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Section 1 — Référencement --}}
                 <section class="flex flex-col gap-6 sm:gap-8">
                     <h2 class="font-serif text-3xl font-bold text-brand sm:text-4xl">Référencement</h2>
@@ -38,7 +47,7 @@
                                 <x-ds.btn
                                     variant="primary"
                                     size="md"
-                                    :href="route('artist.register')"
+                                    :href="route('public.artist-registration')"
                                     wire:navigate
                                 >
                                     Créer un profil artiste
@@ -73,13 +82,10 @@
                                 </button>
                             @else
                                 <form wire:submit="send" class="flex flex-col gap-4">
-                                    <x-ds.input
+                                    <x-ds.field
                                         wire:model="email"
                                         type="email"
-                                        name="email"
                                         label="Adresse e-mail"
-                                        placeholder="vous@exemple.ch"
-                                        :error="$errors->first('email')"
                                         autofocus
                                     />
                                     <div>
@@ -101,7 +107,7 @@
                         <p>Vous souhaitez modifier ou supprimer votre compte&nbsp;?</p>
                         <p>
                             Transmettez votre demande via le lien&nbsp;:
-                            <a href="mailto:info@artistes.ne" class="font-medium underline underline-offset-2 hover:text-brand-teal">Demande de modifications</a>
+                            <a href="{{ route('public.modification-request') }}" wire:navigate class="font-medium underline underline-offset-2 hover:text-brand-teal">Demande de modifications</a>
                         </p>
                     </div>
                 </section>
@@ -113,7 +119,7 @@
                         <p>Tous les six mois, nous vous invitons à confirmer l'actualité de votre profil. Sans réponse de votre part, celui-ci est automatiquement désactivé.</p>
                         <p>
                             Vous pouvez le réactiver à tout moment&nbsp;:
-                            <a href="mailto:info@artistes.ne" class="font-medium underline underline-offset-2 hover:text-brand-teal">Demande de réactivation</a>
+                            <a href="{{ route('public.reactivation-request') }}" wire:navigate class="font-medium underline underline-offset-2 hover:text-brand-teal">Demande de réactivation</a>
                         </p>
                     </div>
                 </section>

@@ -37,186 +37,79 @@
                 </div>
             @endif
 
-            <form wire:submit="save" class="register-form flex flex-col gap-10">
-                {{-- Identité --}}
-                <section class="flex flex-col gap-5">
-                    <h2 class="font-serif text-2xl font-bold text-brand">Identité</h2>
-                    <x-ds.input
-                        wire:model="name"
-                        label="Nom d'artiste"
-                        name="name"
-                        :error="$errors->first('name')"
-                    />
-                    <x-ds.select
-                        wire:model.live="discipline"
-                        name="discipline"
-                        label="Domaine principal"
-                        :error="$errors->first('discipline')"
-                    >
-                        <option value="">— Choisir un domaine —</option>
-                        @foreach ($disciplineOptions as $value => $label)
-                            <option value="{{ $value }}">{{ $label }}</option>
-                        @endforeach
-                    </x-ds.select>
-                    <x-ds.input
-                        wire:model="city"
-                        label="Ville / Commune"
-                        name="city"
-                        placeholder="Ex: Neuchâtel"
-                        :error="$errors->first('city')"
-                    />
-                    <x-ds.select
-                        wire:model.live="secondary_discipline"
-                        name="secondary_discipline"
-                        label="Domaine secondaire (facultatif)"
-                        :error="$errors->first('secondary_discipline')"
-                    >
-                        <option value="">— Aucun —</option>
-                        @foreach ($disciplineOptions as $value => $label)
-                            <option value="{{ $value }}">{{ $label }}</option>
-                        @endforeach
-                    </x-ds.select>
+            <form wire:submit="save" class="register-form flex flex-col gap-8">
+                <x-ds.stepper
+                    :current="$currentStep"
+                    :steps="['Activités', 'Liens']"
+                />
 
-                    {{-- Activités principales --}}
-                    <div class="flex flex-col gap-3">
-                        <label class="block text-sm font-medium text-brand">
-                            Activités principales <span class="font-normal text-brand-muted">(max. 4)</span>
-                        </label>
-                        @if (count($activities) > 0)
-                            <div class="flex flex-wrap gap-2">
-                                @foreach ($activities as $i => $activity)
-                                    <span class="inline-flex items-center gap-1.5 border border-brand-muted bg-brand-paper px-3 py-1 text-sm text-brand"
-                                          wire:key="ep-act-{{ $i }}">
-                                        {{ $activity }}
-                                        <button type="button" wire:click="removeActivity({{ $i }})" class="text-brand-muted hover:text-brand" aria-label="Retirer">
-                                            <x-picto name="close" class="size-3.5" />
-                                        </button>
-                                    </span>
-                                @endforeach
-                            </div>
-                        @endif
-                        @if (count($activities) < 4)
-                            <div class="flex gap-2">
-                                <x-ds.input wire:model="newActivity" name="newActivity" placeholder="Ex. : Peintre…" wire:keydown.enter.prevent="addActivity" class="flex-1" />
-                                <x-ds.btn type="button" variant="secondary" size="sm" wire:click="addActivity">Ajouter</x-ds.btn>
-                            </div>
-                        @endif
-                    </div>
+                {{-- ===================== ÉTAPE 1 : ACTIVITÉS ===================== --}}
+                <div @class(['flex flex-col gap-10' => $currentStep === 1, 'hidden' => $currentStep !== 1])>
+                    {{-- Mes données personnelles --}}
+                    <section class="flex flex-col gap-5">
+                        <h2 class="font-serif text-2xl font-bold text-brand">Mes données personnelles</h2>
+                        <x-ds.field
+                            label="Nom complet"
+                            :value="$fullName"
+                            disabled
+                            description="Issu de votre demande de référencement — non modifiable ici."
+                        />
+                        <x-ds.field
+                            label="Email"
+                            type="email"
+                            :value="$email"
+                            disabled
+                            description="Issu de votre demande de référencement — non modifiable ici."
+                        />
+                        <x-ds.field
+                            wire:model="artist_name"
+                            label="Nom d'artiste"
+                        />
+                        <x-ds.field
+                            wire:model="city"
+                            label="Lieu de résidence"
+                        />
+                    </section>
 
-                    {{-- Mots-clés --}}
-                    <div class="flex flex-col gap-3">
-                        <label class="block text-sm font-medium text-brand">Mots-clés</label>
-                        @if (count($keywords) > 0)
-                            <div class="flex flex-wrap gap-2">
-                                @foreach ($keywords as $i => $keyword)
-                                    <span class="inline-flex items-center gap-1.5 border border-brand-hairline bg-brand-paper px-3 py-1 text-sm text-brand"
-                                          wire:key="ep-kw-{{ $i }}">
-                                        {{ $keyword }}
-                                        <button type="button" wire:click="removeKeyword({{ $i }})" class="text-brand-muted hover:text-brand" aria-label="Retirer">
-                                            <x-picto name="close" class="size-3.5" />
-                                        </button>
-                                    </span>
-                                @endforeach
-                            </div>
-                        @endif
-                        <div class="flex gap-2">
-                            <x-ds.input wire:model="newKeyword" name="newKeyword" placeholder="Ex. : paysage…" wire:keydown.enter.prevent="addKeyword" class="flex-1" />
-                            <x-ds.btn type="button" variant="secondary" size="sm" wire:click="addKeyword">Ajouter</x-ds.btn>
-                        </div>
-                    </div>
-                </section>
-
-                {{-- Biographie --}}
-                <section class="flex flex-col gap-5">
-                    <h2 class="font-serif text-2xl font-bold text-brand">Photo de profil</h2>
-                    <x-ds.photo-upload
+                    {{-- Mon profil artiste --}}
+                    <x-artist.profile-domains
+                        :discipline-options="$disciplineOptions"
+                        :main-activity-options="$mainActivityOptions"
+                        :secondary-activity-options="$secondaryActivityOptions"
                         :current-image-url="$currentImageUrl"
-                        :error="$errors->first('photo')"
+                        :discipline_main_id="$discipline_main_id"
+                        :activities="$activities"
+                        :secondary_activities="$secondary_activities"
+                        :keywords="$keywords"
                     />
-                </section>
+                </div>
 
-                {{-- Biographie --}}
-                <section class="flex flex-col gap-5">
-                    <h2 class="font-serif text-2xl font-bold text-brand">Biographie</h2>
-                    <x-ds.textarea
-                        wire:model="biographyText"
-                        name="biographyText"
-                        :rows="10"
-                        description="Séparez vos paragraphes par une ligne vide."
-                        :error="$errors->first('biographyText')"
-                    />
-                </section>
+                {{-- ===================== ÉTAPE 2 : LIENS ===================== --}}
+                <div @class(['flex flex-col gap-10' => $currentStep === 2, 'hidden' => $currentStep !== 2])>
+                    <x-artist.profile-links :links="$links" :collaborations="$collaborations" />
+                </div>
 
-                {{-- Liens personnels --}}
-                <section class="flex flex-col gap-5">
-                    <div class="flex items-center justify-between">
-                        <h2 class="font-serif text-2xl font-bold text-brand">Espaces personnels</h2>
-                        @if (count($links) < 6)
-                            <x-ds.btn type="button" variant="secondary" size="sm" icon="plus" wire:click="addLink">
-                                Ajouter
-                            </x-ds.btn>
-                        @endif
-                    </div>
-                    <div class="flex flex-col gap-4">
-                        @forelse ($links as $index => $link)
-                            <div class="flex flex-col gap-3 border border-brand-hairline p-4 sm:flex-row sm:items-end" wire:key="link-{{ $index }}">
-                                <div class="w-full sm:w-32">
-                                    <x-ds.input wire:model="links.{{ $index }}.label" label="Libellé" :error="$errors->first('links.'.$index.'.label')" />
-                                </div>
-                                <div class="flex-1">
-                                    <x-ds.input wire:model="links.{{ $index }}.url" label="URL" :error="$errors->first('links.'.$index.'.url')" />
-                                </div>
-                                <x-ds.btn type="button" variant="secondary" size="sm" icon="close" wire:click="removeLink({{ $index }})">Retirer</x-ds.btn>
-                            </div>
-                        @empty
-                            <p class="text-base text-brand-muted">Aucun lien renseigné.</p>
-                        @endforelse
-                    </div>
-                </section>
-
-                {{-- Collaborations --}}
-                <section class="flex flex-col gap-5">
-                    <div class="flex items-center justify-between">
-                        <h2 class="font-serif text-2xl font-bold text-brand">Collaborations</h2>
-                        <x-ds.btn type="button" variant="secondary" size="sm" icon="plus" wire:click="addCollaboration">
-                            Ajouter
+                {{-- Navigation --}}
+                <div class="flex flex-col items-stretch gap-3 border-t border-brand-hairline pt-6 sm:flex-row sm:items-center sm:justify-between">
+                    @if ($currentStep > 1)
+                        <x-ds.btn type="button" variant="secondary" size="md" icon="arrow-left" wire:click="previousStep">
+                            Précédent
                         </x-ds.btn>
-                    </div>
-                    <div class="flex flex-col gap-4">
-                        @forelse ($collaborations as $index => $collab)
-                            <div class="flex flex-col gap-3 border border-brand-hairline p-4 sm:flex-row sm:items-end" wire:key="collab-{{ $index }}">
-                                <div class="flex-1">
-                                    <x-ds.input wire:model="collaborations.{{ $index }}.name" label="Nom" :error="$errors->first('collaborations.'.$index.'.name')" />
-                                </div>
-                                <div class="flex-1">
-                                    <x-ds.input wire:model="collaborations.{{ $index }}.url" label="URL (facultatif)" :error="$errors->first('collaborations.'.$index.'.url')" />
-                                </div>
-                                <x-ds.btn type="button" variant="secondary" size="sm" icon="close" wire:click="removeCollaboration({{ $index }})">Retirer</x-ds.btn>
-                            </div>
-                        @empty
-                            <p class="text-base text-brand-muted">Aucune collaboration renseignée.</p>
-                        @endforelse
-                    </div>
-                </section>
+                    @else
+                        <x-ds.btn variant="secondary" size="md" :href="route('artist.login')" wire:navigate>
+                            Annuler
+                        </x-ds.btn>
+                    @endif
 
-                {{-- Contact --}}
-                <section class="flex flex-col gap-3">
-                    <div class="flex items-start gap-3 border border-brand-hairline p-4">
-                        <input type="checkbox" id="ep_display_contact_button" wire:model="display_contact_button" class="mt-0.5 size-4 accent-brand-teal" />
-                        <label for="ep_display_contact_button" class="flex flex-col gap-1 text-sm">
-                            <span class="font-medium text-brand">Afficher le bouton « Me contacter »</span>
-                            <span class="text-brand-muted">Votre adresse e-mail sera visible sous forme de lien de contact sur votre profil public.</span>
-                        </label>
-                    </div>
-                </section>
-
-                <div class="flex flex-col items-stretch gap-3 border-t border-brand-hairline pt-6 sm:flex-row sm:items-center sm:justify-end">
-                    <x-ds.btn variant="secondary" size="md" :href="route('artist.dashboard')" wire:navigate>
-                        Annuler
-                    </x-ds.btn>
-                    <x-ds.btn type="submit" variant="primary" size="md" icon-trailing="arrow-right" :disabled="$hasPendingChange">
-                        Soumettre la modification
-                    </x-ds.btn>
+                    @if ($currentStep < $totalSteps)
+                        <x-ds.btn type="button" variant="primary" size="md" icon-trailing="arrow-right" wire:click="nextStep">
+                            Étape suivante
+                        </x-ds.btn>
+                    @else
+                        <x-ds.btn type="submit" variant="primary" size="md" icon-trailing="arrow-right" :disabled="$hasPendingChange">
+                            Soumettre la modification
+                        </x-ds.btn>
+                    @endif
                 </div>
             </form>
         </div>

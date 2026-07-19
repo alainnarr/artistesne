@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Database\Models\Artist;
 use App\Enums\ArtistStatus;
-use App\Models\Artist;
 use App\Notifications\ProfileAutoDisabledNotification;
 use Illuminate\Console\Command;
 
@@ -17,7 +17,7 @@ class DisableInactiveArtists extends Command
     {
         // Artists who received a reminder 28+ days ago and never confirmed.
         $artists = Artist::query()
-            ->where('status', ArtistStatus::Published)
+            ->where('enum_status', ArtistStatus::PUBLISHED->value)
             ->whereNotNull('reminder_sent_at')
             ->where('reminder_sent_at', '<', now()->subDays(28))
             ->whereNull('last_confirmed_at')
@@ -33,14 +33,14 @@ class DisableInactiveArtists extends Command
         $this->info("Disabling {$artists->count()} artist(s).");
 
         if ($this->option('dry-run')) {
-            $artists->each(fn ($a) => $this->line("  - {$a->name}"));
+            $artists->each(fn ($a) => $this->line("  - {$a->artist_name}"));
 
             return self::SUCCESS;
         }
 
         foreach ($artists as $artist) {
             $artist->update([
-                'status' => ArtistStatus::Draft,
+                'enum_status' => ArtistStatus::DRAFT->value,
                 'reminder_sent_at' => null,
                 'confirmation_token' => null,
             ]);

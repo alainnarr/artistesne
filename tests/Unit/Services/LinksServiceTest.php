@@ -3,15 +3,8 @@
 namespace Tests\Unit\Services;
 
 use App\Database\Models\Artist;
-use App\Database\Models\Discipline;
 use App\Database\Models\Link;
-use App\Database\Models\Registration;
-use App\Enums\ArtistShowContact;
-use App\Enums\ArtistStatus;
 use App\Enums\LinkType;
-use App\Enums\RegistrationStatus;
-use App\Enums\DisciplineType;
-use App\Models\User;
 use App\Services\LinksService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -39,11 +32,9 @@ class LinksServiceTest extends TestCase
     public function testCreateCreatesLinkForOwner(): void
     {
         $artist = $this->createArtist();
-
         $link = $this->service->create($artist, 'https://instagram.com/test', LinkType::INSTAGRAM);
 
         $this->assertInstanceOf(Link::class, $link);
-
         $this->assertDatabaseHas('links', [
             'artist_id' => $artist->id,
             'link' => 'https://instagram.com/test',
@@ -54,31 +45,32 @@ class LinksServiceTest extends TestCase
     public function testCreateMultipleCreatesSeveralLinks(): void
     {
         $artist = $this->createArtist();
-
-        $links = $this->service->createMultiple(
-            $artist,
+        $links = $this->service->createMultiple($artist,
             [
-                'https://site1.com',
-                'https://site2.com',
+                [
+                    'link' => 'https://old-link.com',
+                    'enum_type' => \App\Enums\LinkType::WEBSITE,
+                ],
+                [
+                    'link' => 'https://example.com',
+                    'enum_type' => \App\Enums\LinkType::WEBSITE,
+                ],
+                [
+                    'link' => 'https://github.com',
+                    'enum_type' => \App\Enums\LinkType::WEBSITE,
+                ],
             ],
             LinkType::WEBSITE
         );
 
-        $this->assertCount(2, $links);
-
-        $this->assertDatabaseCount('links', 2);
+        $this->assertCount(3, $links);
+        $this->assertDatabaseCount('links', 3);
     }
 
     public function testUpdateChangesExistingLink(): void
     {
         $artist = $this->createArtist();
-
-        $this->service->create(
-            $artist,
-            'https://old.com',
-            LinkType::WEBSITE
-        );
-
+        $this->service->create($artist, 'https://old.com', LinkType::WEBSITE);
         $link = $this->service->update(
             $artist,
             'https://old.com',
@@ -86,7 +78,6 @@ class LinksServiceTest extends TestCase
         );
 
         $this->assertEquals('https://new.com', $link->link);
-
         $this->assertDatabaseHas('links', [
             'id' => $link->id,
             'link' => 'https://new.com',
@@ -96,20 +87,68 @@ class LinksServiceTest extends TestCase
     public function testDeleteRemovesLink(): void
     {
         $artist = $this->createArtist();
-
-        $link = $this->service->create(
-            $artist,
-            'https://delete.com',
-            LinkType::WEBSITE
-        );
-
-        $this->service->delete(
-            $artist,
-            'https://delete.com'
-        );
+        $link = $this->service->create($artist, 'https://delete.com', LinkType::WEBSITE);
+        $this->service->delete($artist, 'https://delete.com');
 
         $this->assertDatabaseMissing('links', [
             'id' => $link->id,
         ]);
+    }
+
+    public function testSyncCreatesNewLinks(): void
+    {
+        $artist = $this->seedArtist();
+        $this->service->sync($artist, [
+            'https://example.com',
+            'https://github.com',
+        ]);
+
+        $this->assertDatabaseHas('links', ['link' => 'https://example.com']);
+        $this->assertDatabaseHas('links', ['link' => 'https://github.com']);
+        $this->assertDatabaseCount('links', 2);
+    }
+
+    public function testSyncDeletesRemovedLinks(): void
+    {
+        $artist = $this->seedArtist();
+        $this->service->createMultiple($artist, [
+            [
+                'link' => 'https://old-link.com',
+                'enum_type' => \App\Enums\LinkType::WEBSITE,
+            ],
+            [
+                'link' => 'https://example.com',
+                'enum_type' => \App\Enums\LinkType::WEBSITE,
+            ],
+            [
+                'link' => 'https://github.com',
+                'enum_type' => \App\Enums\LinkType::WEBSITE,
+            ],
+        ]);
+        $this->service->sync($artist, ['https://example.com',]);
+        $this->assertDatabaseHas('links', ['link' => 'https://example.com',]);
+        $this->assertDatabaseMissing('links', ['link' => 'https://github.com',]);
+        $this->assertDatabaseCount('links', 1);
+    }
+
+    public function testSyncKeepsExistingLinksWithoutDuplicating(): void
+    {
+        $artist = $this->seedArtist();
+        $this->service->create($artist, 'https://example.com');
+        $this->service->sync($artist, ['https://example.com']);
+
+        $this->assertDatabaseCount('links', 1);
+    }
+
+    public function testSyncOnlyAffectsLinksOfSameType(): void
+    {
+        $artist = $this->seedArtist();
+        $this->service->create($artist, 'https://example.com', LinkType::WEBSITE);
+        $this->service->create($artist, 'https://twitter.com', LinkType::X);
+
+        $this->service->sync($artist, ['https://github.com'], LinkType::WEBSITE);
+        $this->assertDatabaseMissing('links', ['link' => 'https://example.com']);
+        $this->assertDatabaseHas('links', ['link' => 'https://twitter.com']);
+        $this->assertDatabaseHas('links', ['link' => 'https://github.com']);
     }
 }

@@ -1,26 +1,32 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin;
 
+use App\Database\Models\Registration;
+use App\Database\Models\Repository;
 use App\Http\Controllers\Controller;
-use App\Models\ArtistRegistrationRequest;
+use App\Services\RepositoriesService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RegistrationDocumentController extends Controller
 {
-    public function __invoke(Request $request, ArtistRegistrationRequest $artistRegistrationRequest, int $index): StreamedResponse
+    public function __construct(private readonly RepositoriesService $repositoriesService) {}
+
+    public function download(Request $request, Registration $registration, Repository $repository): StreamedResponse
     {
-        $documents = $artistRegistrationRequest->documents ?? [];
+        abort_unless($request->user()?->isAdmin(), 403);
 
-        abort_if(! isset($documents[$index]), 404);
+        abort_unless(
+            $repository->repositoryable_type === Registration::class
+                && $repository->repositoryable_id === $registration->id,
+            404
+        );
 
-        $doc = $documents[$index];
-        $path = $doc['path'] ?? null;
+        abort_unless($repository->has_file, 404);
 
-        abort_if(! $path || ! Storage::disk('local')->exists($path), 404);
-
-        return Storage::disk('local')->download($path, $doc['name'] ?? basename($path));
+        return $this->repositoriesService->download($repository);
     }
 }

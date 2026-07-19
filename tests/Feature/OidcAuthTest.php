@@ -1,7 +1,7 @@
 <?php
 
+use App\Database\Models\User;
 use App\Enums\UserRole;
-use App\Models\User;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\AbstractProvider;
 use Laravel\Socialite\Two\User as SocialiteUser;
@@ -101,7 +101,7 @@ test('callback logs in a pre-existing admin by adfs_id', function () {
 
     mockSocialite(fakeSocialiteUser());
 
-    $this->get(route('admin.auth.callback'))
+    $this->get(route('admin.auth.callback', ['code' => 'auth-code-123']))
         ->assertRedirect(route('filament.admin.pages.dashboard'));
 
     $this->assertAuthenticatedAs($admin);
@@ -115,7 +115,7 @@ test('callback logs in a pre-existing admin by email and sets adfs_id', function
 
     mockSocialite(fakeSocialiteUser());
 
-    $this->get(route('admin.auth.callback'))
+    $this->get(route('admin.auth.callback', ['code' => 'auth-code-123']))
         ->assertRedirect(route('filament.admin.pages.dashboard'));
 
     $this->assertAuthenticatedAs($admin);
@@ -127,13 +127,13 @@ test('callback provisions a new admin via JIT when enabled', function () {
 
     mockSocialite(fakeSocialiteUser());
 
-    $this->get(route('admin.auth.callback'))
+    $this->get(route('admin.auth.callback', ['code' => 'auth-code-123']))
         ->assertRedirect(route('filament.admin.pages.dashboard'));
 
     $user = User::where('email', 'jean.dupont@ne.ch')->first();
     expect($user)
         ->not->toBeNull()
-        ->role->toBe(UserRole::Admin)
+        ->role->toBe(UserRole::ADMIN)
         ->adfs_id->toBe('adfs-sub-abc123')
         ->password->toBeNull();
 
@@ -149,7 +149,7 @@ test('callback rejects an artist account even if email matches', function () {
 
     mockSocialite(fakeSocialiteUser());
 
-    $this->get(route('admin.auth.callback'))
+    $this->get(route('admin.auth.callback', ['code' => 'auth-code-123']))
         ->assertRedirect(route('filament.admin.auth.login'));
 
     $this->assertGuest();
@@ -160,7 +160,7 @@ test('callback rejects when user does not exist and JIT is disabled', function (
 
     mockSocialite(fakeSocialiteUser());
 
-    $this->get(route('admin.auth.callback'))
+    $this->get(route('admin.auth.callback', ['code' => 'auth-code-123']))
         ->assertRedirect(route('filament.admin.auth.login'));
 
     $this->assertGuest();
@@ -177,7 +177,7 @@ test('callback rejects when user is not in the required AD group', function () {
         'raw' => ['groups' => ['Other-Group']],
     ]));
 
-    $this->get(route('admin.auth.callback'))
+    $this->get(route('admin.auth.callback', ['code' => 'auth-code-123']))
         ->assertRedirect(route('filament.admin.auth.login'));
 
     $this->assertGuest();
@@ -194,7 +194,7 @@ test('callback allows when user is in the required AD group', function () {
         'raw' => ['groups' => ['Admins-Inventaire', 'Other-Group']],
     ]));
 
-    $this->get(route('admin.auth.callback'))
+    $this->get(route('admin.auth.callback', ['code' => 'auth-code-123']))
         ->assertRedirect(route('filament.admin.pages.dashboard'));
 
     $this->assertAuthenticatedAs($admin);
@@ -205,6 +205,68 @@ test('callback handles AD FS error parameter gracefully', function () {
         'error' => 'access_denied',
         'error_description' => 'The user denied the request.',
     ]))->assertRedirect(route('filament.admin.auth.login'));
+
+    $this->assertGuest();
+});
+
+test('callback handles missing authorization code gracefully', function () {
+    $this->get(route('admin.auth.callback'))
+        ->assertRedirect(route('filament.admin.auth.login'));
+
+    $this->assertGuest();
+});
+
+test('JIT provisioning succeeds when AD FS omits name claims and name is derived from UPN', function () {
+    // AD FS on-premise often omits name/given_name/family_name claims.
+    // The provider falls back to the UPN username segment as the display name.
+    config(['services.adfs.jit_provisioning' => true]);
+
+    mockSocialite(fakeSocialiteUser([
+        'name' => 'BianchiAl',   // derived from upn BianchiAl@ne.ch by AdfsProvider
+        'email' => 'BianchiAl@ne.ch',
+        'id' => 'adfs-sub-bianchi',
+        'raw' => [
+            'sub' => 'adfs-sub-bianchi',
+            'upn' => 'BianchiAl@ne.ch',
+            'unique_name' => 'BianchiAl@ne.ch',
+        ],
+    ]));
+
+    $this->get(route('admin.auth.callback', ['code' => 'auth-code-123']))
+        ->assertRedirect(route('filament.admin.pages.dashboard'));
+
+    $user = User::where('email', 'BianchiAl@ne.ch')->first();
+    expect($user)
+        ->not->toBeNull()
+        ->name->toBe('BianchiAl')
+        ->adfs_id->toBe('adfs-sub-bianchi')
+        ->role->toBe(UserRole::ADMIN);
+});
+
+test('admin logout redirects to AD FS end-session endpoint when configured', function () {
+    config(['services.adfs.base_url' => 'https://adfs.ne.ch']);
+
+    $admin = User::factory()->admin()->create();
+
+    $expected = 'https://adfs.ne.ch/adfs/oauth2/logout?'.http_build_query([
+        'post_logout_redirect_uri' => route('filament.admin.auth.login', ['manual' => 1]),
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('filament.admin.auth.logout'))
+        ->assertRedirect($expected);
+
+    $this->assertGuest();
+});
+
+test('admin logout redirects to manual admin login when AD FS is not configured', function () {
+    config(['services.adfs.base_url' => null]);
+
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->post(route('filament.admin.auth.logout'))
+        ->assertRedirect(route('filament.admin.auth.login', ['manual' => 1]));
 
     $this->assertGuest();
 });

@@ -64,10 +64,10 @@ class UserTest extends TestCase
     public function testEnumRoleAttributeReturnsEnumInstance(): void
     {
         $user = $this->makeModel();
-        $user->enum_role = UserRole::Admin->value;
+        $user->enum_role = UserRole::ADMIN->value;
 
         $this->assertInstanceOf(UserRole::class, $user->enum_role);
-        $this->assertEquals(UserRole::Admin, $user->enum_role);
+        $this->assertEquals(UserRole::ADMIN, $user->enum_role);
     }
 
     public function testGetRulesReturnsValidationRules(): void
@@ -141,7 +141,7 @@ class UserTest extends TestCase
     public function testIsAdminReturnsTrueForAdmin(): void
     {
         $user = $this->makeModel();
-        $user->enum_role = UserRole::Admin;
+        $user->enum_role = UserRole::ADMIN;
 
         $this->assertTrue($user->isAdmin());
         $this->assertFalse($user->isArtist());
@@ -150,7 +150,7 @@ class UserTest extends TestCase
     public function testIsArtistReturnsTrueForArtist(): void
     {
         $user = $this->makeModel();
-        $user->enum_role = UserRole::Artist;
+        $user->enum_role = UserRole::ARTIST;
 
         $this->assertTrue($user->isArtist());
         $this->assertFalse($user->isAdmin());
@@ -162,9 +162,8 @@ class UserTest extends TestCase
         $panel->shouldReceive('getId')
             ->once()
             ->andReturn('admin');
-
         $user = $this->makeModel();
-        $user->enum_role = UserRole::Admin;
+        $user->enum_role = UserRole::ADMIN;
 
         $this->assertTrue($user->canAccessPanel($panel)
         );
@@ -176,9 +175,8 @@ class UserTest extends TestCase
         $panel->shouldReceive('getId')
             ->once()
             ->andReturn('artist');
-
         $user = $this->makeModel();
-        $user->enum_role = UserRole::Admin;
+        $user->enum_role = UserRole::ADMIN;
 
         $this->assertFalse($user->canAccessPanel($panel));
     }
@@ -189,9 +187,8 @@ class UserTest extends TestCase
         $panel->shouldReceive('getId')
             ->once()
             ->andReturn('admin');
-
         $user = $this->makeModel();
-        $user->enum_role = UserRole::Artist;
+        $user->enum_role = UserRole::ARTIST;
 
         $this->assertFalse($user->canAccessPanel($panel));
     }

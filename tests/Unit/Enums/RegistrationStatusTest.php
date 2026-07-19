@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Enumerations;
+namespace Tests\Unit\Enums;
 
 use App\Enums\RegistrationStatus;
 use Tests\TestCase;
@@ -12,7 +12,7 @@ class RegistrationStatusTest extends TestCase
         parent::setUp();
     }
 
-    public function testLabelReturnsCorrectLabel(): void
+    public function test_label_returns_correct_label(): void
     {
         $this->assertEquals('Ouvert', RegistrationStatus::OPEN->label());
         $this->assertEquals('Approuvé', RegistrationStatus::APPROVED->label());
@@ -20,7 +20,7 @@ class RegistrationStatusTest extends TestCase
         $this->assertEquals('En attente', RegistrationStatus::PENDING->label());
     }
 
-    public function testEnumHasCorrectValues(): void
+    public function test_enum_has_correct_values(): void
     {
         $this->assertEquals('open', RegistrationStatus::OPEN->value);
         $this->assertEquals('approved', RegistrationStatus::APPROVED->value);
@@ -28,7 +28,7 @@ class RegistrationStatusTest extends TestCase
         $this->assertEquals('pending', RegistrationStatus::PENDING->value);
     }
 
-    public function testCanCreateEnumFromValue(): void
+    public function test_can_create_enum_from_value(): void
     {
         $this->assertSame(RegistrationStatus::OPEN, RegistrationStatus::from('open'));
         $this->assertSame(RegistrationStatus::APPROVED, RegistrationStatus::from('approved'));
@@ -36,7 +36,7 @@ class RegistrationStatusTest extends TestCase
         $this->assertSame(RegistrationStatus::PENDING, RegistrationStatus::from('pending'));
     }
 
-    public function testTryFromReturnsNullForInvalidValue(): void
+    public function test_try_from_returns_null_for_invalid_value(): void
     {
         $this->assertNull(RegistrationStatus::tryFrom('invalid'));
     }

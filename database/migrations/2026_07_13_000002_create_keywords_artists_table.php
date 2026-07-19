@@ -13,8 +13,7 @@ return new class extends Migration {
     {
         $table->bigIncrements('id');
         $table->foreignKey('keyword_id', 'keywords', 'id', 'bigInteger');
-        // $table->foreignKey('artist_id', 'artists', 'id', 'bigInteger');
-        $table->unsignedBigInteger('artist_id');
+        $table->foreignKey('artist_id', 'artists', 'id', 'bigInteger');
     }
 
     public function up(): void

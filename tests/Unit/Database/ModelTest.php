@@ -3,10 +3,10 @@
 namespace Tests\Unit\Database;
 
 use App\Database\Model;
+use App\Database\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use App\Models\User;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ModelTest extends TestCase
 {
@@ -14,43 +14,47 @@ class ModelTest extends TestCase
 
     private function makeModel()
     {
-        return new class extends Model {
+        return new class extends Model
+        {
             protected $table = 'test_table';
+
             protected $auditable = '_test_table';
+
             protected $fillable = ['f1', 'f2'];
+
             protected $updatable = ['u1', 'u2'];
         };
     }
 
-    public function testGetTableReturnsTableName()
+    public function test_get_table_returns_table_name()
     {
         $model = $this->makeModel();
 
         $this->assertEquals('test_table', $model->getTable());
     }
 
-    public function testGetAuditableReturnsAuditableName()
+    public function test_get_auditable_returns_auditable_name()
     {
         $model = $this->makeModel();
 
         $this->assertEquals('_test_table', $model->getAuditable());
     }
 
-    public function testGetFillableReturnsArray()
+    public function test_get_fillable_returns_array()
     {
         $model = $this->makeModel();
 
         $this->assertEquals(['f1', 'f2'], $model->getFillable());
     }
 
-    public function testGetUpdatableReturnsArray()
+    public function test_get_updatable_returns_array()
     {
         $model = $this->makeModel();
 
         $this->assertEquals(['u1', 'u2'], $model->getUpdatable());
     }
 
-    public function testGetRulesReturnsEmptyArray()
+    public function test_get_rules_returns_empty_array()
     {
         $rules = Model::getRules();
 

@@ -9,9 +9,14 @@ use Illuminate\Support\Str;
 
 class UsersService
 {
-
-
-    public function create(string $email, string $name, UserRole $role = UserRole::Artist, ?string $adfsId = null, ?string $magicLink = null): User
+    public function create(
+        string $email,
+        string $name,
+        UserRole $role = UserRole::ARTIST,
+        ?string $adfsId = null,
+        ?string $magic_link_token = null,
+        ?string $magic_link_sent_at = null
+    ): User
     {
         $data = [
             'uuid' => (string) Str::uuid(),
@@ -19,11 +24,16 @@ class UsersService
             'name' => $name,
             'enum_role' => $role,
             'adfs_id' => $adfsId,
-            'magic_link' => $magicLink,
+            'magic_link_token' => $magic_link_token,
+            'magic_link_sent_at' => $magic_link_sent_at,
         ];
 
-        Validator::make($data, User::getRules())->validate();
+        $user = User::where('email', $email)->first();
+        if ($user) {
+            return $user;
+        }
+        Validator::make($data, User::getRules([], $user))->validate();
 
-        return User::create($data);
+        return User::firstOrCreate(['email' => $email], $data);
     }
 }

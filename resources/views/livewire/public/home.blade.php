@@ -89,7 +89,7 @@
             title="Se faire référencer sur la plateforme"
             description="Artiste professionnel·le dans le canton de Neuchâtel ? Rejoignez les {{ $total }} artistes de l'annuaire et ouvrez votre pratique à de nouveaux regards."
             cta-label="Espace artistes"
-            :cta-href="route('artist.register')"
+            :cta-href="route('public.artist-registration')"
         />
     </x-ds.section>
 </div>

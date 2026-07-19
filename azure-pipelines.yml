@@ -3,6 +3,7 @@
 #
 # Branch / tag strategy:
 #   develop  → build (--no-dev) + auto-deploy to Staging (QA)
+#   release/*→ build (--no-dev) + auto-deploy to Staging (QA)
 #   main     → build only; no auto-deploy (merge target, kept clean)
 #   v*       → build (--no-dev) + create Octopus release + deploy to Production
 #              (blocked by a Manual Approval step in the Octopus process)
@@ -20,11 +21,19 @@ trigger:
   branches:
     include:
       - develop
+      - 'release/*'
   tags:
     include:
       - 'v*'
 
-pr: none
+pr:
+  branches:
+    include:
+      - develop
+      - main
+      - 'feature/*'
+      - 'fix/*'
+      - 'release/*'
 
 variables:
   - group: scne-deploy                        # OctopusProjectName, OctopusPackageId
@@ -38,13 +47,141 @@ variables:
     value: '1.0.$(Build.BuildId)'
   - name: octopusSpace
     value: 'WEB'
+  - name: composerDownloadUrl
+    value: 'https://getcomposer.org/composer-stable.phar'
 
 pool:
-  name: Typo3_2
+  name: PHP
 
 stages:
+  # ── Quality gate: runs on every push and PR ──────────────────────────────
+  - stage: Quality
+    displayName: Code quality & security
+    jobs:
+      - job: quality
+        displayName: Pint + PHPStan + Audit
+        timeoutInMinutes: 15
+        workspace:
+          clean: all
+        steps:
+          - checkout: self
+            fetchDepth: 1
+            displayName: Checkout sources
+
+          - script: |
+              set -eo pipefail
+              export http_proxy="$(proxyUrl)"
+              export https_proxy="$(proxyUrl)"
+              export no_proxy=tfs.ne.ch
+              export HOME=/root/
+              export COMPOSER_HOME="$HOME/.config/composer"
+              $(phpCommand) --version
+              wget "$(composerDownloadUrl)" -O composer.phar -S -t 5
+            displayName: Download Composer
+
+          - script: |
+              set -eo pipefail
+              export http_proxy="$(proxyUrl)"
+              export https_proxy="$(proxyUrl)"
+              export no_proxy=tfs.ne.ch
+              COMPOSER_RUN_USER="$(stat -c '%U' "$(Build.SourcesDirectory)")"
+              if [ "$(id -u)" -eq 0 ] && [ "$COMPOSER_RUN_USER" = "root" ]; then
+                COMPOSER_RUN_USER="composerci"
+                id -u "$COMPOSER_RUN_USER" >/dev/null 2>&1 || useradd -m -s /bin/bash "$COMPOSER_RUN_USER"
+              fi
+              if [ "$COMPOSER_RUN_USER" = "root" ]; then
+                export HOME=/root
+              else
+                export HOME="/home/$COMPOSER_RUN_USER"
+              fi
+              export COMPOSER_HOME="$HOME/.config/composer"
+              mkdir -p "$COMPOSER_HOME" "$(COMPOSER_CACHE_DIR)"
+              if [ "$(id -u)" -eq 0 ] && [ "$COMPOSER_RUN_USER" != "root" ]; then
+                chown -R "$COMPOSER_RUN_USER":"$COMPOSER_RUN_USER" "$HOME" "$(Build.SourcesDirectory)" "$(COMPOSER_CACHE_DIR)"
+              fi
+              run_as_composer_user() {
+                if [ "$(id -u)" -eq 0 ] && [ "$COMPOSER_RUN_USER" != "root" ]; then
+                  runuser -u "$COMPOSER_RUN_USER" -- env \
+                    HOME="$HOME" \
+                    COMPOSER_HOME="$COMPOSER_HOME" \
+                    COMPOSER_CACHE_DIR="$(COMPOSER_CACHE_DIR)" \
+                    http_proxy="$http_proxy" \
+                    https_proxy="$https_proxy" \
+                    no_proxy="$no_proxy" \
+                    PATH="$PATH" \
+                    bash -lc "$1"
+                else
+                  bash -lc "$1"
+                fi
+              }
+              git config --global http.https://tfs.ne.ch.extraheader \
+                "Authorization: Bearer $(System.AccessToken)"
+              mkdir -p /tmp/phpbin && ln -sf "$(which $(phpCommand))" /tmp/phpbin/php
+              export PATH="/tmp/phpbin:$PATH"
+              run_as_composer_user "git config --global http.https://tfs.ne.ch.extraheader \"Authorization: Bearer $(System.AccessToken)\""
+              run_as_composer_user "$(phpCommand) ./composer.phar install --prefer-dist --no-interaction --no-progress"
+            displayName: Composer install (with dev)
+            env:
+              System.AccessToken: $(System.AccessToken)
+
+          - script: |
+              set -eo pipefail
+              mkdir -p /tmp/phpbin && ln -sf "$(which $(phpCommand))" /tmp/phpbin/php
+              export PATH="/tmp/phpbin:$PATH"
+              $(phpCommand) ./vendor/bin/pint --parallel --test
+            displayName: Pint (code style check)
+
+          - script: |
+              set -eo pipefail
+              mkdir -p /tmp/phpbin && ln -sf "$(which $(phpCommand))" /tmp/phpbin/php
+              export PATH="/tmp/phpbin:$PATH"
+              $(phpCommand) ./vendor/bin/phpstan analyse --memory-limit=512M --no-progress
+            displayName: PHPStan (level 5)
+
+          - script: |
+              set -eo pipefail
+              export http_proxy="$(proxyUrl)"
+              export https_proxy="$(proxyUrl)"
+              export no_proxy=tfs.ne.ch
+              COMPOSER_RUN_USER="$(stat -c '%U' "$(Build.SourcesDirectory)")"
+              if [ "$(id -u)" -eq 0 ] && [ "$COMPOSER_RUN_USER" = "root" ]; then
+                COMPOSER_RUN_USER="composerci"
+                id -u "$COMPOSER_RUN_USER" >/dev/null 2>&1 || useradd -m -s /bin/bash "$COMPOSER_RUN_USER"
+              fi
+              if [ "$COMPOSER_RUN_USER" = "root" ]; then
+                export HOME=/root
+              else
+                export HOME="/home/$COMPOSER_RUN_USER"
+              fi
+              export COMPOSER_HOME="$HOME/.config/composer"
+              mkdir -p "$COMPOSER_HOME" "$(COMPOSER_CACHE_DIR)"
+              if [ "$(id -u)" -eq 0 ] && [ "$COMPOSER_RUN_USER" != "root" ]; then
+                chown -R "$COMPOSER_RUN_USER":"$COMPOSER_RUN_USER" "$HOME" "$(Build.SourcesDirectory)" "$(COMPOSER_CACHE_DIR)"
+              fi
+              run_as_composer_user() {
+                if [ "$(id -u)" -eq 0 ] && [ "$COMPOSER_RUN_USER" != "root" ]; then
+                  runuser -u "$COMPOSER_RUN_USER" -- env \
+                    HOME="$HOME" \
+                    COMPOSER_HOME="$COMPOSER_HOME" \
+                    COMPOSER_CACHE_DIR="$(COMPOSER_CACHE_DIR)" \
+                    http_proxy="$http_proxy" \
+                    https_proxy="$https_proxy" \
+                    no_proxy="$no_proxy" \
+                    PATH="$PATH" \
+                    bash -lc "$1"
+                else
+                  bash -lc "$1"
+                fi
+              }
+              mkdir -p /tmp/phpbin && ln -sf "$(which $(phpCommand))" /tmp/phpbin/php
+              export PATH="/tmp/phpbin:$PATH"
+              run_as_composer_user "$(phpCommand) ./composer.phar audit"
+            displayName: Composer audit (security)
+
+  # ── Build & deploy ───────────────────────────────────────────────────────
   - stage: Build
     displayName: Build & deploy
+    dependsOn: Quality
     jobs:
       - job: build_and_deploy
         displayName: Composer + Vite + Octopus
@@ -76,11 +213,39 @@ stages:
               export http_proxy="$(proxyUrl)"
               export https_proxy="$(proxyUrl)"
               export no_proxy=tfs.ne.ch
-              export HOME=/root/
+              COMPOSER_RUN_USER="$(stat -c '%U' "$(Build.SourcesDirectory)")"
+              if [ "$(id -u)" -eq 0 ] && [ "$COMPOSER_RUN_USER" = "root" ]; then
+                COMPOSER_RUN_USER="composerci"
+                id -u "$COMPOSER_RUN_USER" >/dev/null 2>&1 || useradd -m -s /bin/bash "$COMPOSER_RUN_USER"
+              fi
+              if [ "$COMPOSER_RUN_USER" = "root" ]; then
+                export HOME=/root
+              else
+                export HOME="/home/$COMPOSER_RUN_USER"
+              fi
               export COMPOSER_HOME="$HOME/.config/composer"
+              mkdir -p "$COMPOSER_HOME" "$(COMPOSER_CACHE_DIR)"
+              if [ "$(id -u)" -eq 0 ] && [ "$COMPOSER_RUN_USER" != "root" ]; then
+                chown -R "$COMPOSER_RUN_USER":"$COMPOSER_RUN_USER" "$HOME" "$(Build.SourcesDirectory)" "$(COMPOSER_CACHE_DIR)"
+              fi
+              run_as_composer_user() {
+                if [ "$(id -u)" -eq 0 ] && [ "$COMPOSER_RUN_USER" != "root" ]; then
+                  runuser -u "$COMPOSER_RUN_USER" -- env \
+                    HOME="$HOME" \
+                    COMPOSER_HOME="$COMPOSER_HOME" \
+                    COMPOSER_CACHE_DIR="$(COMPOSER_CACHE_DIR)" \
+                    http_proxy="$http_proxy" \
+                    https_proxy="$https_proxy" \
+                    no_proxy="$no_proxy" \
+                    PATH="$PATH" \
+                    bash -lc "$1"
+                else
+                  bash -lc "$1"
+                fi
+              }
               $(phpCommand) --version
-              wget https://getcomposer.org/download/2.6.6/composer.phar -S -t 5
-              $(phpCommand) ./composer.phar -V
+              wget "$(composerDownloadUrl)" -O composer.phar -S -t 5
+              run_as_composer_user "$(phpCommand) ./composer.phar -V"
             displayName: Download & verify Composer
 
           - script: |
@@ -88,20 +253,45 @@ stages:
               export http_proxy="$(proxyUrl)"
               export https_proxy="$(proxyUrl)"
               export no_proxy=tfs.ne.ch
-              export HOME=/root/
+              COMPOSER_RUN_USER="$(stat -c '%U' "$(Build.SourcesDirectory)")"
+              if [ "$(id -u)" -eq 0 ] && [ "$COMPOSER_RUN_USER" = "root" ]; then
+                COMPOSER_RUN_USER="composerci"
+                id -u "$COMPOSER_RUN_USER" >/dev/null 2>&1 || useradd -m -s /bin/bash "$COMPOSER_RUN_USER"
+              fi
+              if [ "$COMPOSER_RUN_USER" = "root" ]; then
+                export HOME=/root
+              else
+                export HOME="/home/$COMPOSER_RUN_USER"
+              fi
               export COMPOSER_HOME="$HOME/.config/composer"
+              mkdir -p "$COMPOSER_HOME" "$(COMPOSER_CACHE_DIR)"
+              if [ "$(id -u)" -eq 0 ] && [ "$COMPOSER_RUN_USER" != "root" ]; then
+                chown -R "$COMPOSER_RUN_USER":"$COMPOSER_RUN_USER" "$HOME" "$(Build.SourcesDirectory)" "$(COMPOSER_CACHE_DIR)"
+              fi
+              run_as_composer_user() {
+                if [ "$(id -u)" -eq 0 ] && [ "$COMPOSER_RUN_USER" != "root" ]; then
+                  runuser -u "$COMPOSER_RUN_USER" -- env \
+                    HOME="$HOME" \
+                    COMPOSER_HOME="$COMPOSER_HOME" \
+                    COMPOSER_CACHE_DIR="$(COMPOSER_CACHE_DIR)" \
+                    http_proxy="$http_proxy" \
+                    https_proxy="$https_proxy" \
+                    no_proxy="$no_proxy" \
+                    PATH="$PATH" \
+                    bash -lc "$1"
+                else
+                  bash -lc "$1"
+                fi
+              }
               rm -rf "$(COMPOSER_CACHE_DIR)/vcs/"
               mkdir -p /tmp/phpbin && ln -sf "$(which $(phpCommand))" /tmp/phpbin/php
               export PATH="/tmp/phpbin:$PATH"
-              $(phpCommand) ./composer.phar install \
-                --no-dev \
-                --prefer-dist \
-                --no-interaction \
-                --no-progress \
-                --optimize-autoloader \
-                --classmap-authoritative
+              run_as_composer_user "git config --global http.https://tfs.ne.ch.extraheader \"Authorization: Bearer $(System.AccessToken)\""
+              run_as_composer_user "$(phpCommand) ./composer.phar install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader --classmap-authoritative"
               echo "Composer install completed (--no-dev)."
             displayName: Composer install (--no-dev)
+            env:
+              System.AccessToken: $(System.AccessToken)
 
           # ── 4. Node.js + pnpm + Vite ─────────────────────────────────────
           - script: |
@@ -211,7 +401,7 @@ stages:
               Packages: '$(Build.ArtifactStagingDirectory)/octopacked/$(OctopusPackageId).$(PackageVersion).tar.gz'
               Replace: true
 
-          # ── 8a. Staging — triggered by push to develop ───────────────────
+          # ── 8a. Staging — triggered by push to develop and release/* ─────
           - task: octopusdeploy.octopus-deploy-build-release-tasks.octopus-create-release.OctopusCreateRelease@6
             displayName: Create Octopus release (Staging)
             inputs:
@@ -222,7 +412,7 @@ stages:
               DefaultPackageVersion: '$(PackageVersion)'
               GitRef: '$(Build.SourceBranch)'
               IgnoreIfAlreadyExists: true
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+            condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')))
 
           - task: octopusdeploy.octopus-deploy-build-release-tasks.octopus-deploy.OctopusDeployRelease@6
             displayName: Deploy to Staging (VDN-TYPOS1)
@@ -232,7 +422,7 @@ stages:
               Project: '$(OctopusProjectName)'
               ReleaseNumber: '$(PackageVersion)'
               Environments: 'QA'
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+            condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')))
 
           # ── 8b. Production — triggered by tag v* (pushed from main) ──────
           # The Octopus deployment process includes a Manual Approval step that

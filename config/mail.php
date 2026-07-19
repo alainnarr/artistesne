@@ -122,11 +122,19 @@ return [
     |
     | When MAIL_TO_ADDRESS is set, every outgoing mail is redirected to that
     | address regardless of the intended recipient. Leave unset in production.
+    | Supports multiple recipients as a comma-separated list, e.g.
+    | MAIL_TO_ADDRESS="dev1@example.com, dev2@example.com".
     |
     */
 
     'to' => env('MAIL_TO_ADDRESS')
-        ? ['address' => env('MAIL_TO_ADDRESS'), 'name' => env('MAIL_TO_NAME', 'Dev Catch-All')]
+        ? [
+            'addresses' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('MAIL_TO_ADDRESS'))
+            ))),
+            'name' => env('MAIL_TO_NAME', 'Dev Catch-All'),
+        ]
         : null,
 
     /*

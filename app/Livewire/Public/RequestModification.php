@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Public;
 
+use App\Database\Models\User;
 use App\Enums\UserRole;
-use App\Models\User;
 use App\Notifications\ModificationRequestNotification;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Notification;
@@ -48,7 +48,7 @@ class RequestModification extends Component
     {
         $data = $this->validate();
 
-        $admins = User::where('role', UserRole::Admin)->get();
+        $admins = User::where('role', UserRole::ADMIN)->get();
 
         Notification::send($admins, new ModificationRequestNotification(
             senderEmail: $data['email'],

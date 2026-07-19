@@ -156,6 +156,22 @@ return [
         array_map('trim', explode(',', (string) env('APP_PRELAUNCH_IP_WHITELIST', ''))),
     ),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin IP Whitelist
+    |--------------------------------------------------------------------------
+    |
+    | When non-empty, restricts access to the /admin panel (Filament + OIDC
+    | auth routes) to the listed IP addresses or CIDR ranges.
+    | Leave empty (default) to allow all IPs — the whitelist is opt-in.
+    |
+    | Example: APP_ADMIN_IP_WHITELIST=148.196.0.0/16,10.0.0.1
+    |
+    */
+    'admin_ip_whitelist' => array_filter(
+        array_map('trim', explode(',', (string) env('APP_ADMIN_IP_WHITELIST', ''))),
+    ),
+
     // Paths accessible to everyone even when prelaunch is on.
     // Whitelisted IPs always bypass this list and get full access.
     'prelaunch_allowed_paths' => [
@@ -167,11 +183,29 @@ return [
         // Filament admin panel
         'admin',
         'admin/*',
-        // Livewire server updates (required for all Livewire pages to function)
+        // Filament core routes (e.g. signed export/import download links
+        // emailed to admins) are registered outside the `/admin` panel prefix
+        // (under `filament/...`, see config('filament.system_route_prefix')),
+        // so they need their own whitelist entry or clicking a download link
+        // from an export-completed email 503s instead of downloading.
+        'filament/*',
+        // Session logout (artist portal) — lives at the site root, not under
+        // /artiste, so it must be whitelisted explicitly or logout 503s.
+        'logout',
+        // Livewire server updates/assets (v4 may use hashed prefixes like
+        // livewire-abc123/update instead of the classic livewire/update path)
         'livewire/*',
+        'livewire-*',
+        'livewire-*/*',
         // Static assets served by Vite / storage
         'build/*',
         'storage/*',
+        // Legal & contact pages — always accessible so footer links work
+        'a-propos',
+        'conditions',
+        'protection-des-donnees',
+        'contact',
+        'demande-de-modification',
     ],
 
 ];

@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\ArtistChangeRequests\Tables;
 
-use App\Enums\ApprovalStatus;
-use App\Models\ArtistChangeRequest;
+use App\Database\Models\ArtistChangeRequest;
+use App\Enums\ArtistChangeRequestStatus;
 use App\Notifications\ChangeRequestDecisionNotification;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
@@ -19,7 +21,7 @@ class ArtistChangeRequestsTable
     {
         return $table
             ->columns([
-                TextColumn::make('artist.name')
+                TextColumn::make('artist.artist_name')
                     ->label('Artiste')
                     ->searchable()
                     ->sortable(),
@@ -28,7 +30,8 @@ class ArtistChangeRequestsTable
                     ->toggleable(),
                 TextColumn::make('status')
                     ->label('Statut')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (ArtistChangeRequestStatus $state) => $state->label()),
                 TextColumn::make('created_at')
                     ->label('Reçue')
                     ->since()
@@ -37,8 +40,8 @@ class ArtistChangeRequestsTable
             ->filters([
                 SelectFilter::make('status')
                     ->label('Statut')
-                    ->options(ApprovalStatus::class)
-                    ->default(ApprovalStatus::Pending->value),
+                    ->options(ArtistChangeRequestStatus::class)
+                    ->default(ArtistChangeRequestStatus::PENDING->value),
             ])
             ->recordActions([
                 Action::make('approve')
@@ -47,7 +50,7 @@ class ArtistChangeRequestsTable
                     ->icon('heroicon-o-check-circle')
                     ->requiresConfirmation()
                     ->modalHeading('Appliquer ces modifications ?')
-                    ->modalDescription('La page de l\'artiste sera mise à jour immédiatement.')
+                    ->modalDescription("La page de l'artiste sera mise à jour immédiatement.")
                     ->schema([
                         Textarea::make('notes')->label('Message interne (optionnel)')->rows(3),
                     ])

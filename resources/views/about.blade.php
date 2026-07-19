@@ -4,7 +4,7 @@
         <x-ds.hero
             variant="page"
             title="À propos de"
-            accent="Artiste.ne"
+            accent="Artistes.ne"
         >
             <x-slot:lead-slot>
                 <p>
