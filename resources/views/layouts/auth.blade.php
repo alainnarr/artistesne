@@ -14,7 +14,7 @@
 <body class="flex min-h-screen flex-col items-center justify-center bg-brand-cream font-sans text-brand antialiased">
     <div class="w-full max-w-md px-4 py-12">
         <div class="mb-8 text-center">
-            <a href="{{ route('home') }}" wire:navigate>
+            <a href="{{ route('public.home') }}" wire:navigate>
                 <x-picto name="artistes-ne" set="logos" class="mx-auto h-6 w-auto" />
             </a>
         </div>

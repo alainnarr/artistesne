@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AdminIpWhitelist;
 use App\Http\Middleware\EnsureUserIsArtist;
 use App\Http\Middleware\PrelaunchMode;
 use Illuminate\Foundation\Application;
@@ -24,7 +25,15 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'artist' => EnsureUserIsArtist::class,
+            'admin.ip' => AdminIpWhitelist::class,
         ]);
+
+        // No 'login' named route exists (Fortify was removed — artists
+        // authenticate via magic link, admins via AD FS/Filament). Send any
+        // unauthenticated visitor hitting an `auth`-protected route straight
+        // to the magic-link request page instead of throwing when the
+        // default `Authenticate` middleware looks up `route('login')`.
+        $middleware->redirectGuestsTo(fn () => route('artist.login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

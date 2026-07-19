@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Artist;
 
+use App\Database\Models\Artist;
 use App\Http\Controllers\Controller;
-use App\Models\Artist;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -30,7 +30,7 @@ class ConfirmationController extends Controller
             auth()->login($artist->user, remember: true);
         }
 
-        return redirect()->route('artist.dashboard')
+        return redirect()->route('artist.login')
             ->with('success', 'Votre profil a été confirmé. Merci !');
     }
 
@@ -55,7 +55,7 @@ class ConfirmationController extends Controller
             auth()->login($artist->user, remember: true);
         }
 
-        return redirect()->route('artist.profile.edit')
+        return redirect()->route('artist.profile-edit')
             ->with('info', 'Vous pouvez maintenant mettre à jour votre profil.');
     }
 }

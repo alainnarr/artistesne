@@ -1,6 +1,7 @@
 <?php
 
-use Database\Seeders\TaxonomyTermsSeeder;
+use Database\Seeders\ActivitiesSeeder;
+use Database\Seeders\DisciplinesSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -18,11 +19,14 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
     ->use(LazilyRefreshDatabase::class)
     ->beforeEach(function (): void {
-        // Artistic domains are administered via TaxonomyTerm (type "domain")
-        // instead of a hardcoded enum — most registration-flow Feature tests
-        // rely on the canonical slugs (e.g. "musique") being valid, so seed
-        // them automatically rather than requiring every test to do it.
-        (new TaxonomyTermsSeeder)->seedDomains();
+        // Fake Livewire's temp-upload disk so tests using TemporaryUploadedFile
+        // don't fail with a "Permission denied" on the real temp directory.
+        Storage::fake('tmp-for-tests');
+
+        // New data model: disciplines + activities used by RegisterArtist
+        // form validation (Rule::exists('disciplines', 'id'), etc.).
+        (new DisciplinesSeeder)->run();
+        (new ActivitiesSeeder)->run();
     })
     ->in('Feature');
 
@@ -57,3 +61,19 @@ expect()->extend('toBeOne', function () {
 | Helpers globaux disponibles dans tous les fichiers de test.
 |
 */
+
+use App\Database\Models\Activity;
+use App\Database\Models\Discipline;
+use Illuminate\Support\Facades\Storage;
+
+/** Resolves a seeded discipline ID (as string for wire:model compatibility). */
+function disciplineId(string $code = 'musique'): string
+{
+    return (string) Discipline::where('code', $code)->value('id');
+}
+
+/** Resolves a seeded activity ID (as string for wire:model compatibility). */
+function activityId(string $code = 'musique.chanteur'): string
+{
+    return (string) Activity::where('code', $code)->value('id');
+}

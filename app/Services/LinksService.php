@@ -1,59 +1,76 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Database\Models\Artist;
 use App\Database\Models\Link;
 use App\Database\Models\Registration;
-use App\Database\Models\Artist;
 use App\Enums\LinkType;
+use Illuminate\Support\Facades\Validator;
 
 class LinksService
 {
-    public function create(Artist|Registration $owner, string $link, LinkType $type = LinkType::WEBSITE): Link
+    public function create(Artist|Registration $owner, string $link, LinkType $type = LinkType::OTHER): Link
     {
-        return $owner->links()->create(['link' => $link, 'enum_type' => $type]);
+        $data = ['link' => $link, 'enum_type' => $type];
+        Validator::make($data, Link::getRules(array_keys($data)))->validate();
+
+        return $owner->links()->create($data);
     }
 
-    public function createMultiple(Artist|Registration $owner, array $links, LinkType $type = LinkType::WEBSITE): array
+    public function update(Link $link, string $newLink): Link
+    {
+        Validator::make(['link' => $newLink], Link::getRules(['link']))->validate();
+        $link->update(['link' => $newLink]);
+        return $link;
+    }
+
+    public function createMultiple(Artist|Registration $owner, array $links, LinkType $type = LinkType::COLLABORATION): array
     {
         $records = [];
 
         foreach ($links as $link) {
-            $records[] = $this->create($owner, $link['link'], $link['enum_type'] ?? $type);
+            $records[] = $this->create($owner, $link['link'], LinkType::from($link['enum_type'] ?? $type));
         }
 
         return $records;
     }
 
-    public function update(Artist|Registration $owner, string $link, string $newLink): Link
+    public function sync(Artist|Registration $owner, array $links): void
     {
-        $linkModel = $owner->links()->where('link', $link)->firstOrFail();
+        $incoming = collect($links)
+            ->map(fn ($item) => [
+                'enum_type' => $item['enum_type'],
+                'link' => $item['link'] ?? null,
+            ])
+            ->keyBy('enum_type');
 
-        $linkModel->update(['link' => $newLink]);
+        $existing = $owner->links->keyBy('enum_type');
 
-        return $linkModel;
-    }
+        foreach ($incoming as $enumType => $data) {
+            $current = $existing->get($enumType);
 
-    public function delete(Artist|Registration $owner, string $link): void
-    {
-        $linkModel = $owner->links()->where('link', $link)->firstOrFail();
-        $linkModel->delete();
-    }
+            if ($current) {
+                if (blank($data['link'])) {
+                    $current->delete();
+                    $existing->forget($enumType);
+                    continue;
+                }
 
-    public function sync(Artist|Registration $owner, array $links, LinkType $type = LinkType::WEBSITE): void
-    {
-        $existingLinks = $owner->links()->where('enum_type', $type)->pluck('link')->toArray();
+                if ($current->link !== $data['link']) {
+                    $this->update($current, $data['link']);
+                }
 
-        foreach ($existingLinks as $existingLink) {
-            if (!in_array($existingLink, $links)) {
-                $this->delete($owner, $existingLink);
+                $existing->forget($enumType);
+                continue;
+            }
+
+            if (filled($data['link'])) {
+                $this->create($owner, $data['link'], LinkType::from($enumType));
             }
         }
 
-        foreach ($links as $link) {
-            if (!in_array($link, $existingLinks)) {
-                $this->create($owner, $link, $type);
-            }
-        }
+        $existing->each->delete();
     }
 }

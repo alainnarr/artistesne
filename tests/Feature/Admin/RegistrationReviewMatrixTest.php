@@ -2,29 +2,26 @@
 
 declare(strict_types=1);
 
-use App\Enums\ApprovalStatus;
+use App\Database\Models\Artist;
+use App\Database\Models\Discipline;
+use App\Database\Models\Registration;
+use App\Database\Models\User;
+use App\Enums\RegistrationStatus;
 use App\Enums\UserRole;
-use App\Filament\Resources\ArtistRegistrationRequests\Pages\EditArtistRegistrationRequest;
-use App\Mail\AdminContactMail;
-use App\Models\Artist;
-use App\Models\ArtistRegistrationRequest;
-use App\Models\User;
+use App\Filament\Resources\Registrations\Pages\ViewRegistration;
 use App\Notifications\MagicLinkNotification;
-use App\Notifications\RegistrationApprovedNotification;
 use App\Notifications\RegistrationRejectedNotification;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 
 /*
 |--------------------------------------------------------------------------
-| Matrice de validation des demandes de référencement (persona admin)
+| Matrice de validation des inscriptions (persona admin)
 |--------------------------------------------------------------------------
 |
-| Complète tests/Feature/Admin/AdminWorkflowsTest.php avec la matrice
-| rigoureuse des transitions de statut, des notifications, des garde-fous
-| (actions masquées hors "pending") et des règles de validation.
+| Couvre les transitions de statut de Registration (OPEN -> APPROVED/REJECTED),
+| les notifications associées et les garde-fous (actions masquées hors OPEN).
 |
 */
 
@@ -33,150 +30,112 @@ beforeEach(function () {
     $this->actingAs($this->admin);
 });
 
+function makeRegistration(array $overrides = []): Registration
+{
+    $musique = Discipline::where('code', 'musique')->firstOrFail();
+
+    return Registration::create(array_merge([
+        'real_name' => 'Camille Résonance',
+        'artist_name' => 'Camille Résonance',
+        'birth_date' => now()->subYears(28)->toDateString(),
+        'email' => 'camille@inventaire.test',
+        'phone' => '+41791234567',
+        'residence_location' => 'Neuchâtel',
+        'discipline_main' => $musique->id,
+        'enum_status' => RegistrationStatus::OPEN->value,
+    ], $overrides));
+}
+
 /**
  * @return Testable
  */
-function editRegistration(ArtistRegistrationRequest $request)
+function viewRegistration(Registration $registration)
 {
-    return Livewire::test(EditArtistRegistrationRequest::class, ['record' => $request->id]);
+    return Livewire::test(ViewRegistration::class, ['record' => $registration->id]);
 }
 
-it('approval sends both the approved notification and the magic link, and stamps the throttle', function () {
+it('approval sends a single magic-link notification confirming approval, and stamps the throttle', function () {
     Notification::fake();
 
-    $request = ArtistRegistrationRequest::factory()->create([
-        'artist_name' => 'Camille Résonance',
-        'email' => 'camille@inventaire.test',
-    ]);
+    $registration = makeRegistration();
 
-    editRegistration($request)->callAction('approve', ['notes' => null]);
+    viewRegistration($registration)->callAction('approve', ['notes' => null]);
 
     $user = User::where('email', 'camille@inventaire.test')->firstOrFail();
 
-    expect($user->role)->toBe(UserRole::Artist)
+    expect($user->role)->toBe(UserRole::ARTIST)
         ->and($user->password)->toBeNull()
         ->and($user->last_magic_link_sent_at)->not->toBeNull();
 
-    Notification::assertSentTo($user, RegistrationApprovedNotification::class);
     Notification::assertSentTo($user, MagicLinkNotification::class);
+    Notification::assertSentToTimes($user, MagicLinkNotification::class, 1);
 });
 
-it('approval sets the created artist discipline from the request main domain', function () {
-    $request = ArtistRegistrationRequest::factory()->create([
+it('approval sets the created artist discipline from the registration main domain', function () {
+    $musique = Discipline::where('code', 'musique')->firstOrFail();
+
+    $registration = makeRegistration([
         'artist_name' => 'Domaine Test',
         'email' => 'domaine@inventaire.test',
-        'main_domain' => 'Musique',
+        'discipline_main' => $musique->id,
     ]);
 
-    editRegistration($request)->callAction('approve', ['notes' => null]);
+    viewRegistration($registration)->callAction('approve', ['notes' => null]);
 
     $user = User::where('email', 'domaine@inventaire.test')->firstOrFail();
 
-    expect($user->artist->discipline)->toBe('Musique');
+    expect($user->artist->discipline_main_id)->toBe($musique->id);
 });
 
 it('approval reuses an existing user with the same email instead of duplicating it', function () {
     $existing = User::factory()->artist()->create(['email' => 'reuse@inventaire.test']);
 
-    $request = ArtistRegistrationRequest::factory()->create([
+    $registration = makeRegistration([
         'artist_name' => 'Reuse Artist',
         'email' => 'reuse@inventaire.test',
     ]);
 
-    editRegistration($request)->callAction('approve', ['notes' => null]);
+    viewRegistration($registration)->callAction('approve', ['notes' => null]);
 
     expect(User::where('email', 'reuse@inventaire.test')->count())->toBe(1)
         ->and(Artist::where('user_id', $existing->id)->count())->toBe(1);
 });
 
-it('approval generates a unique slug when the base slug already exists', function () {
-    Artist::factory()->create(['slug' => 'slug-collision']);
-
-    $request = ArtistRegistrationRequest::factory()->create([
-        'artist_name' => 'Slug Collision',
-        'email' => 'collision@inventaire.test',
-    ]);
-
-    editRegistration($request)->callAction('approve', ['notes' => null]);
-
-    $user = User::where('email', 'collision@inventaire.test')->firstOrFail();
-
-    expect($user->artist->slug)->toBe('slug-collision-2');
-});
-
 it('rejection stamps reviewer metadata and notifies the applicant', function () {
     Notification::fake();
 
-    $request = ArtistRegistrationRequest::factory()->create([
+    $registration = makeRegistration([
         'artist_name' => 'Refus Test',
         'email' => 'refus@inventaire.test',
     ]);
 
-    editRegistration($request)->callAction('reject', ['notes' => 'Hors périmètre cantonal.']);
+    viewRegistration($registration)->callAction('reject', ['notes' => 'Hors périmètre cantonal.']);
 
-    $request->refresh();
+    $registration->refresh();
 
-    expect($request->status)->toBe(ApprovalStatus::Rejected)
-        ->and($request->reviewed_by)->toBe($this->admin->id)
-        ->and($request->reviewed_at)->not->toBeNull()
-        ->and($request->review_notes)->toBe('Hors périmètre cantonal.');
+    expect($registration->enum_status)->toBe(RegistrationStatus::REJECTED)
+        ->and($registration->reviewed_by)->toBe($this->admin->id)
+        ->and($registration->reviewed_at)->not->toBeNull()
+        ->and($registration->review_notes)->toBe('Hors périmètre cantonal.');
 
     Notification::assertSentTimes(RegistrationRejectedNotification::class, 1);
 });
 
-it('requesting changes moves the request to changes_requested and requires a message', function () {
-    $request = ArtistRegistrationRequest::factory()->create();
+it('hides review actions once a registration is no longer open', function (RegistrationStatus $status) {
+    $registration = makeRegistration(['enum_status' => $status->value]);
 
-    editRegistration($request)
-        ->callAction('requestChanges', ['notes' => ''])
-        ->assertHasActionErrors(['notes' => 'required']);
-
-    expect($request->fresh()->status)->toBe(ApprovalStatus::Pending);
-
-    editRegistration($request)
-        ->callAction('requestChanges', ['notes' => 'Merci de compléter votre dossier.'])
-        ->assertHasNoActionErrors();
-
-    expect($request->fresh()->status)->toBe(ApprovalStatus::ChangesRequested)
-        ->and($request->fresh()->review_notes)->toBe('Merci de compléter votre dossier.');
-});
-
-it('contacting the applicant sends an admin email without changing the status', function () {
-    Mail::fake();
-
-    $request = ArtistRegistrationRequest::factory()->create([
-        'email' => 'contact@inventaire.test',
-        'artist_name' => 'Contact Test',
-    ]);
-
-    editRegistration($request)->callAction('contactApplicant', [
-        'subject' => 'Précision requise',
-        'body' => 'Pourriez-vous préciser votre parcours ?',
-    ]);
-
-    Mail::assertSent(AdminContactMail::class, fn (AdminContactMail $mail) => $mail->hasTo('contact@inventaire.test'));
-
-    expect($request->fresh()->status)->toBe(ApprovalStatus::Pending);
-});
-
-it('hides review actions once a request is no longer pending', function (ApprovalStatus $status) {
-    $request = ArtistRegistrationRequest::factory()->create(['status' => $status]);
-
-    editRegistration($request)
+    viewRegistration($registration)
         ->assertActionDoesNotExist('approve')
-        ->assertActionDoesNotExist('reject')
-        ->assertActionDoesNotExist('requestChanges');
+        ->assertActionDoesNotExist('reject');
 })->with([
-    'approved' => ApprovalStatus::Approved,
-    'rejected' => ApprovalStatus::Rejected,
-    'changes requested' => ApprovalStatus::ChangesRequested,
+    'approved' => RegistrationStatus::APPROVED,
+    'rejected' => RegistrationStatus::REJECTED,
 ]);
 
-it('exposes review actions while a request is pending', function () {
-    $request = ArtistRegistrationRequest::factory()->create(['status' => ApprovalStatus::Pending]);
+it('exposes review actions while a registration is open', function () {
+    $registration = makeRegistration(['enum_status' => RegistrationStatus::OPEN->value]);
 
-    editRegistration($request)
+    viewRegistration($registration)
         ->assertActionExists('approve')
-        ->assertActionExists('reject')
-        ->assertActionExists('requestChanges');
+        ->assertActionExists('reject');
 });

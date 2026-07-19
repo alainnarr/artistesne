@@ -2,11 +2,15 @@
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class RegistrationRejectedNotification extends Notification
+class RegistrationRejectedNotification extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     public function __construct(
         public string $artistName,
         public ?string $notes = null,
@@ -25,14 +29,14 @@ class RegistrationRejectedNotification extends Notification
         $message = (new MailMessage)
             ->subject('Suite à votre demande de référencement — Artistes.ne')
             ->greeting('Bonjour '.$this->artistName.',')
-            ->line('Après examen de votre demande de référencement sur la plateforme Artistes.ne, nous ne sommes malheureusement pas en mesure de donner suite à votre dossier dans l\'état actuel.');
+            ->line('Nous avons bien examiné votre demande de référencement avec attention et nous vous remercions de l\'intérêt que vous portez à l\'annuaire.')
+            ->line('Après examen, nous ne sommes malheureusement pas en mesure de donner une suite favorable à votre demande.');
 
         if (filled($this->notes)) {
             $message->line('**Motif communiqué par l\'équipe du SCNE :**')
                 ->line($this->notes);
         }
 
-        return $message
-            ->line('Si vous pensez que cette décision est erronée ou si votre situation a évolué, n\'hésitez pas à nous contacter directement.');
+        return $message->line('Si vous souhaitez en savoir plus ou échanger à ce sujet, n\'hésitez pas à nous contacter à l\'adresse suivante : service.culture@ne.ch.');
     }
 }

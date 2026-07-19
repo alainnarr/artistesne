@@ -3,14 +3,22 @@
 namespace App\Notifications;
 
 use Carbon\CarbonInterval;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
-class MagicLinkNotification extends Notification
+class MagicLinkNotification extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     // Magic links are valid for one week (see SPECS Feature 2.3).
-    public function __construct(public int $expiresInMinutes = 60 * 24 * 7) {}
+    public function __construct(
+        public int $expiresInMinutes = 60 * 24 * 7,
+        public bool $afterApproval = false,
+    ) {}
 
     /**
      * @return array<int, string>
@@ -22,13 +30,30 @@ class MagicLinkNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        // Single-use: mint a fresh token and persist it on the user, so this
+        // specific link is invalidated the moment it's consumed (or a newer
+        // link is requested) even though its signature stays valid until expiry.
+        $token = Str::random(40);
+        $notifiable->forceFill(['magic_link_token' => $token])->save();
+
         $url = URL::temporarySignedRoute(
-            'artist.magic-link.consume',
+            'artist.magic-link-consume',
             now()->addMinutes($this->expiresInMinutes),
-            ['user' => $notifiable->getKey()],
+            ['user' => $notifiable->getKey(), 'token' => $token],
         );
 
         $validity = CarbonInterval::minutes($this->expiresInMinutes)->cascade()->locale('fr')->forHumans();
+
+        if ($this->afterApproval) {
+            return (new MailMessage)
+                ->subject('Confirmation de référencement sur Artistes.ne')
+                ->greeting('Bonjour '.$notifiable->name.',')
+                ->line('Nous avons bien examiné votre **demande de référencement** et nous avons le plaisir de vous informer qu\'elle **a été acceptée.**')
+                ->line('Vous pouvez désormais **créer votre profil** sur Artistes.ne en cliquant sur le lien ci-dessous. Il vous permettra de compléter votre fiche : photo, texte de présentation, liens vers vos espaces personnels et collaborations, mots-clés.')
+                ->action('Créer mon profil', $url)
+                ->line('Une fois votre profil complété, il sera visible sur l\'annuaire.')
+                ->line('Bienvenue parmi les artistes de l\'annuaire neuchâtelois.'."\n".'**L\'équipe du SCNE**');
+        }
 
         return (new MailMessage)
             ->subject('Votre lien de connexion — Inventaire des artistes')

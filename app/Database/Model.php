@@ -2,10 +2,9 @@
 
 namespace App\Database;
 
+use App\Database\Models\User;
 use App\Database\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
-use Illuminate\Support\Facades\DB;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Model extends EloquentModel
@@ -17,6 +16,7 @@ class Model extends EloquentModel
     protected $auditable = '';
 
     protected $fillable = [];
+
     protected $updatable = [];
 
     protected $hidden = [
@@ -25,7 +25,7 @@ class Model extends EloquentModel
         'created_by',
         'updated_by',
         'audit_action',
-        'audit_url'
+        'audit_url',
     ];
 
     /* * * * * * * * VALIDATION * * * * * * * */
@@ -52,14 +52,17 @@ class Model extends EloquentModel
     {
         return $this->table;
     }
+
     public function getAuditable(): string
     {
         return $this->auditable;
     }
+
     public function getFillable(): array
     {
         return $this->fillable;
     }
+
     public function getUpdatable(): array
     {
         return $this->updatable;

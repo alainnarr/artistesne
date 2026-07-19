@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use App\Enums\ApprovalStatus;
+use App\Enums\ArtistChangeRequestStatus;
 use App\Enums\ArtistStatus;
 use App\Support\ReviewMessageTemplates;
 
 it('exposes Filament label/color via the shared enum traits', function () {
-    expect(ApprovalStatus::Approved->getLabel())->toBe(ApprovalStatus::Approved->label())
-        ->and(ApprovalStatus::Approved->getColor())->toBe(ApprovalStatus::Approved->color())
-        ->and(ArtistStatus::Published->getLabel())->toBe(ArtistStatus::Published->label())
-        ->and(ArtistStatus::Published->getColor())->toBe(ArtistStatus::Published->color());
+    expect(ArtistChangeRequestStatus::APPROVED->getLabel())->toBe(ArtistChangeRequestStatus::APPROVED->label())
+        ->and(ArtistChangeRequestStatus::APPROVED->getColor())->toBe(ArtistChangeRequestStatus::APPROVED->color())
+        ->and(ArtistStatus::PUBLISHED->getLabel())->toBe(ArtistStatus::PUBLISHED->label())
+        ->and(ArtistStatus::PUBLISHED->getColor())->toBe(ArtistStatus::PUBLISHED->color());
 });
 
 it('provides matching keys for review message templates', function () {

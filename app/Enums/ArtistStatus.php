@@ -11,22 +11,22 @@ enum ArtistStatus: string implements HasColor, HasLabel
 {
     use ProvidesColor, ProvidesLabel;
 
-    case Draft = 'draft';
-    case Published = 'published';
+    case DRAFT = 'draft';
+    case PUBLISHED = 'published';
 
     public function label(): string
     {
         return match ($this) {
-            self::Draft => 'Brouillon',
-            self::Published => 'Publié',
+            self::DRAFT => 'Brouillon',
+            self::PUBLISHED => 'Publié',
         };
     }
 
     public function color(): string
     {
         return match ($this) {
-            self::Draft => 'gray',
-            self::Published => 'success',
+            self::DRAFT => 'gray',
+            self::PUBLISHED => 'success',
         };
     }
 }

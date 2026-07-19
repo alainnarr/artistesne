@@ -14,20 +14,20 @@ class UserRoleTest extends TestCase
 
     public function testLabelReturnsCorrectLabel(): void
     {
-        $this->assertEquals('Administrateur', UserRole::Admin->label());
-        $this->assertEquals('Artiste', UserRole::Artist->label());
+        $this->assertEquals('Administrateur', UserRole::ADMIN->label());
+        $this->assertEquals('Artiste', UserRole::ARTIST->label());
     }
 
     public function testEnumHasCorrectValues(): void
     {
-        $this->assertEquals('admin', UserRole::Admin->value);
-        $this->assertEquals('artist', UserRole::Artist->value);
+        $this->assertEquals('admin', UserRole::ADMIN->value);
+        $this->assertEquals('artist', UserRole::ARTIST->value);
     }
 
     public function testCanCreateEnumFromValue(): void
     {
-        $this->assertSame(UserRole::Admin, UserRole::from('admin'));
-        $this->assertSame(UserRole::Artist, UserRole::from('artist'));
+        $this->assertSame(UserRole::ADMIN, UserRole::from('admin'));
+        $this->assertSame(UserRole::ARTIST, UserRole::from('artist'));
     }
 
     public function testTryFromReturnsNullForInvalidValue(): void

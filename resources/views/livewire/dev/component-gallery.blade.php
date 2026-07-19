@@ -171,36 +171,28 @@
      INPUTS
      =================================================================== --}}
 <section id="inputs" class="mb-20 scroll-mt-6">
-    <h2 class="mb-1 font-serif text-2xl font-bold text-brand">Inputs & textarea & select</h2>
-    <p class="mb-6 text-sm text-brand-muted">Figma 2269:16306 / 2272:12569 — tous les états.</p>
+    <h2 class="mb-1 font-serif text-2xl font-bold text-brand">Field (input / select / textarea)</h2>
+    <p class="mb-6 text-sm text-brand-muted">
+        Figma "Master Text field" (node 19:1484) — label flottant qui coupe la bordure une fois
+        rempli/focus. États succès/erreur pilotés par la validation Livewire (`$errors`), pas
+        démontrables statiquement ici.
+    </p>
 
-    <x-dev.gallery-card label="Input — états">
-        <div class="grid max-w-2xl gap-4">
-            <x-ds.input label="Default" placeholder="Saisissez du texte" />
-            <x-ds.input label="Avec valeur" value="Marie Dupont" />
-            <x-ds.input label="Avec icône leading" icon="email" placeholder="email@exemple.ch" />
-            <x-ds.input label="Succès (validé)" value="marie@exemple.ch" success />
-            <x-ds.input label="Erreur" value="marie@" error="Adresse e-mail invalide." />
-            <x-ds.input label="Désactivé" placeholder="Non modifiable" disabled />
-            <x-ds.input label="Avec description" description="Texte d'aide sous le champ." placeholder="…" />
-        </div>
-    </x-dev.gallery-card>
-
-    <x-dev.gallery-card label="Textarea" class="mt-6">
-        <div class="grid max-w-2xl gap-4">
-            <x-ds.textarea label="Commentaire" placeholder="Votre commentaire…" />
-            <x-ds.textarea label="Désactivé" placeholder="Verrouillé" disabled />
-        </div>
-    </x-dev.gallery-card>
-
-    <x-dev.gallery-card label="Select" class="mt-6">
-        <div class="grid max-w-2xl gap-4">
-            <x-ds.select label="Domaine principal" placeholder="Choisir un domaine"
-                :options="['musique' => 'Musique', 'arts_visuels' => 'Arts visuels', 'theatre' => 'Théâtre']" />
-            <x-ds.select label="Désactivé" disabled :options="['' => '—']" />
+    <x-dev.gallery-card label="Field — types">
+        <div class="grid max-w-2xl gap-6">
+            <x-ds.field label="Nom complet" />
+            <x-ds.field label="Désactivé" disabled />
+            <x-ds.field label="Avec description" description="Texte d'aide sous le champ." />
+            <x-ds.field as="select" label="Domaine principal">
+                <option value="musique">Musique</option>
+                <option value="arts_visuels">Arts visuels</option>
+                <option value="theatre">Théâtre</option>
+            </x-ds.field>
+            <x-ds.field as="textarea" label="Commentaire" :rows="4" />
         </div>
     </x-dev.gallery-card>
 </section>
+
 
 {{-- ===================================================================
      CHECKBOX / RADIO
@@ -678,18 +670,6 @@
 
             <x-ds.btn href="/" variant="primary" size="md">Retour à l'accueil</x-ds.btn>
         </x-ds.empty-state>
-    </x-dev.gallery-card>
-</section>
-
-{{-- ===================================================================
-     CONTACT FORM
-     =================================================================== --}}
-<section id="contact-form" class="mb-20 scroll-mt-6">
-    <h2 class="mb-1 font-serif text-2xl font-bold text-brand">Contact form</h2>
-    <p class="mb-6 text-sm text-brand-muted">Figma 561:51129 — formulaire de contact public.</p>
-
-    <x-dev.gallery-card label="Aperçu — variante par défaut">
-        <x-ds.contact-form />
     </x-dev.gallery-card>
 </section>
 

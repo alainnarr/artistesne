@@ -9,8 +9,10 @@ class StagingSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            TaxonomyTermsSeeder::class,
-            DemoSeeder::class,
+            UsersSeeder::class,
+            RegistrationsSeeder::class,
+            ArtistChangeRequestsSeeder::class,
+            //DemoSeeder::class,
         ]);
     }
 }

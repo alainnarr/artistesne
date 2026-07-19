@@ -85,9 +85,9 @@ class ArtistsServiceTest extends TestCase
         $user = $this->seedUser([
             'email' => $registration->email,
         ]);
-        $artist = $this->service->create($registration, $user, ArtistStatus::Published);
+        $artist = $this->service->create($registration, $user, ArtistStatus::PUBLISHED);
 
-        $this->assertEquals(ArtistStatus::Published, $artist->enum_status);
+        $this->assertEquals(ArtistStatus::PUBLISHED, $artist->enum_status);
     }
 
     public function testUpdatePersistsChanges(): void
@@ -114,14 +114,14 @@ class ArtistsServiceTest extends TestCase
     public function testUpdatePublishesArtist(): void
     {
         $artist = $this->seedArtist([
-            'enum_status' => ArtistStatus::Draft,
+            'enum_status' => ArtistStatus::DRAFT,
             'published_at' => null,
             'confirmed_at' => null,
         ]);
         $request = $this->seedArtistChangeRequest($artist);
         $updated = $this->service->update($artist, $request);
 
-        $this->assertEquals(ArtistStatus::Published, $updated->enum_status);
+        $this->assertEquals(ArtistStatus::PUBLISHED, $updated->enum_status);
         $this->assertNotNull($updated->confirmed_at);
         $this->assertNotNull($updated->published_at);
     }

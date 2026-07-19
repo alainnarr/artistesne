@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Database\Models;
 
 use App\Database\Model;
@@ -17,6 +19,7 @@ class Synonym extends Model
     protected $updatable = [];
 
     /* * * * * * * * VALIDATION * * * * * * * */
+    /** @return array<string, string|array> */
     public static function getRules(array $fields = [], $register = null): array
     {
         $rules = [
@@ -33,6 +36,7 @@ class Synonym extends Model
     /* * * * * * * * END - VALIDATION * * * * * * * */
 
     /* * * * * * * * RELATIONS * * * * * * * */
+    /** @return BelongsTo<Activity, $this> */
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class, 'activity_id');

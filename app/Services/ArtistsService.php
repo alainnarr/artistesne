@@ -21,25 +21,33 @@ class ArtistsService
         private readonly KeywordsService $keywordsService
     ) {}
 
-    public function create(Registration $registration, User $user, ArtistStatus $status = ArtistStatus::Draft): Artist
+    public function create(Registration $registration, User $user, ArtistStatus $status = ArtistStatus::DRAFT): Artist
     {
         $data = [
             'registration_id' => $registration->id,
             'user_id' => $user->id,
+            'slug' => $registration->slug,
             'artist_name' => $registration->name,
             'email' => $registration->email,
             'phone' => $registration->phone,
             'city' => $registration->city,
+            'discipline_main' => $registration->discipline_main,
             'discipline_secondary' => $registration->discipline_secondary,
             'enum_status' => $status,
             'enum_show_contact' => ArtistShowContact::HIDE,
         ];
-        Validator::make($data, Artist::getRules())->validate();
+
+        $artist = Artist::where('registration_id', $registration->id)->first();
+        if ($artist) {
+            return $artist;
+        }
+
+        Validator::make($data, Artist::getRules(array_keys($data)))->validate();
 
         $activities = $registration->activities()->pluck('activities.id')->toArray();
 
         return DB::transaction(function () use ($data, $activities) {
-            $artist = Artist::create($data);
+            $artist = Artist::firstOrCreate(['registration_id' => $data['registration_id']], $data);
 
             if (isset($activities)) {
                 $this->activitiesService->sync($artist, $activities);
@@ -65,12 +73,6 @@ class ArtistsService
         Validator::make($artistData, Artist::getRules(array_keys($artistData), ['id' => $artist->id,]))->validate();
 
         return DB::transaction(function () use ($changeRequest, $artist, $data, $artistData) {
-            $artistData['enum_status'] = ArtistStatus::Published;
-            $artistData['confirmed_at'] = now();
-            if ($artist->published_at === null) {
-                $artistData['published_at'] = now();
-            }
-
             $artist->update($artistData);
 
             if (isset($data['activities'])) {
@@ -89,7 +91,32 @@ class ArtistsService
                 $this->repositoryService->replicateRepository($changeRequest->image, $artist);
             }
 
-            return $artist->fresh(['activities', 'links', 'keywords', 'repositories']);
+            $this->changeStatus($artist, ArtistStatus::PUBLISHED);
+
+            return $artist->fresh(['activities', 'links', 'keywords', 'image']);
         });
+    }
+
+    public function changeStatus(Artist $artist, ArtistStatus $status): Artist {
+        if ($artist->enum_status === $status) {
+            return $artist;
+        }
+
+        if ($status === ArtistStatus::PUBLISHED && !$artist->image()->exists()) {
+            throw new \Exception('Cannot publish artist without an associated image.');
+        }
+
+        $artistData['enum_status'] = $status;
+        if ($status === ArtistStatus::PUBLISHED) {
+            $artistData['last_confirmed_at'] = now();
+            if ($artist->published_at === null) {
+                $artistData['published_at'] = now();
+            }
+        }
+
+        Validator::make($artistData, Artist::getRules(array_keys($artistData), $artist))->validate();
+        $artist->update($artistData);
+
+        return $artist->fresh();
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Artist;
-use App\Models\SearchSynonym;
+use App\Database\Models\Artist;
+use App\Database\Models\SearchSynonym;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;

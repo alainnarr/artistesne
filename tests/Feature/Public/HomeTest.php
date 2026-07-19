@@ -1,7 +1,7 @@
 <?php
 
+use App\Database\Models\Artist;
 use App\Livewire\Public\Home;
-use App\Models\Artist;
 use Livewire\Livewire;
 
 it('responds with 200 on /', function () {

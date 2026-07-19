@@ -20,6 +20,13 @@ services:
             IGNITION_LOCAL_SITES_PATH: '${PWD}'
         volumes:
             - '.:/var/www/html'
+            # Sibling checkout of sien/socialite-adfs used by the local `path`
+            # repository in composer.json (repositories[].url: ../sien-socialite-adfs).
+            # Mounted at the matching relative location so the path repo resolves
+            # inside the container exactly as it does on the host. Optional: if this
+            # directory doesn't exist on the host, Docker Compose will still start,
+            # composer falls back to the GitLab registry for this package.
+            - '../sien-socialite-adfs:/var/www/sien-socialite-adfs'
         networks:
             - sail
         depends_on:

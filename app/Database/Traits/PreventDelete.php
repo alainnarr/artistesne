@@ -10,7 +10,7 @@ trait PreventDelete
     {
         static::deleting(function ($model) {
             throw new Exception(
-                'It is not allowed to delete information from this table: ' . $model->getTable()
+                'It is not allowed to delete information from this table: '.$model->getTable()
             );
         });
     }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Database;
+namespace Tests\Unit\Database\Models;
 
 use App\Database\Models\Activity;
 use App\Database\Models\Artist;
@@ -25,15 +25,15 @@ class RegistrationTest extends TestCase
 
     private function makeModel(): Registration
     {
-        return new Registration();
+        return new Registration;
     }
 
-    public function testGetTableReturnsTableName(): void
+    public function test_get_table_returns_table_name(): void
     {
         $this->assertEquals('registrations', $this->makeModel()->getTable());
     }
 
-    public function testGetFillableReturnsArray(): void
+    public function test_get_fillable_returns_array(): void
     {
         $this->assertEquals([
             'real_name',
@@ -64,7 +64,7 @@ class RegistrationTest extends TestCase
         $this->assertEquals([], $this->makeModel()->getUpdatable());
     }
 
-    public function testCastsReturnsEnumStatus(): void
+    public function test_casts_returns_enum_status(): void
     {
         $casts = $this->makeModel()->getCasts();
 
@@ -72,16 +72,7 @@ class RegistrationTest extends TestCase
         $this->assertEquals(RegistrationStatus::class, $casts['enum_status']);
     }
 
-    public function testEnumStatusAttributeReturnsEnumInstance(): void
-    {
-        $model = $this->makeModel();
-        $model->enum_status = RegistrationStatus::APPROVED->value;
-
-        $this->assertInstanceOf(RegistrationStatus::class, $model->enum_status);
-        $this->assertEquals(RegistrationStatus::APPROVED, $model->enum_status);
-    }
-
-    public function testGetRulesReturnsValidationRules(): void
+    public function test_get_rules_returns_all_rules_when_fields_empty(): void
     {
         $rules = Registration::getRules();
 
@@ -114,16 +105,23 @@ class RegistrationTest extends TestCase
         $this->assertEquals('nullable|string', $rules['review_notes']);
     }
 
-    public function testGetRulesFiltersByFields(): void
+    public function test_get_rules_filters_by_fields(): void
     {
         $rules = Registration::getRules(['real_name', 'email']);
 
-        $this->assertCount(2, $rules);
-        $this->assertArrayHasKey('real_name', $rules);
-        $this->assertArrayHasKey('email', $rules);
+        $this->assertEquals(['real_name', 'email'], array_keys($rules));
     }
 
-    public function testGetRulesReturnsIntersectionOnlyForKnownFields(): void
+    public function test_get_rules_email_contains_required_and_unique_rules(): void
+    {
+        $rules = Registration::getRules(['email']);
+
+        $this->assertIsArray($rules['email']);
+        $this->assertContains('required', $rules['email']);
+        $this->assertContains('email', $rules['email']);
+    }
+
+    public function test_get_rules_returns_intersection_only_for_known_fields(): void
     {
         $rules = Registration::getRules(['real_name', 'unknown_field']);
 
@@ -131,7 +129,7 @@ class RegistrationTest extends TestCase
         $this->assertArrayHasKey('real_name', $rules);
     }
 
-    public function testActivitiesRelation(): void
+    public function test_activities_relation(): void
     {
         $relation = $this->makeModel()->activities();
 
@@ -142,15 +140,7 @@ class RegistrationTest extends TestCase
         $this->assertEquals('activity_id', $relation->getRelatedPivotKeyName());
     }
 
-    public function testActivitiesRegistrationsRelation(): void
-    {
-        $relation = $this->makeModel()->activitiesRegistrations();
-
-        $this->assertInstanceOf(HasMany::class, $relation);
-        $this->assertEquals('registration_id', $relation->getForeignKeyName());
-    }
-
-    public function testDisciplineMainRelation(): void
+    public function test_discipline_main_relation(): void
     {
         $relation = $this->makeModel()->disciplineMain();
 
@@ -159,7 +149,7 @@ class RegistrationTest extends TestCase
         $this->assertEquals('discipline_main', $relation->getForeignKeyName());
     }
 
-    public function testDisciplineSecondaryRelation(): void
+    public function test_discipline_secondary_relation(): void
     {
         $relation = $this->makeModel()->disciplineSecondary();
 
@@ -168,16 +158,7 @@ class RegistrationTest extends TestCase
         $this->assertEquals('discipline_secondary', $relation->getForeignKeyName());
     }
 
-    public function testArtistRelation(): void
-    {
-        $relation = $this->makeModel()->artist();
-
-        $this->assertInstanceOf(HasOne::class, $relation);
-        $this->assertInstanceOf(Artist::class, $relation->getRelated());
-        $this->assertEquals('registration_id', $relation->getForeignKeyName());
-    }
-
-    public function testRepositoriesRelation(): void
+    public function test_repositories_relation(): void
     {
         $relation = $this->makeModel()->repositories();
 

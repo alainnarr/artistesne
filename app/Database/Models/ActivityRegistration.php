@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Database\Models;
 
 use App\Database\Model;
@@ -14,10 +16,11 @@ class ActivityRegistration extends Model
 
     protected $fillable = [
         'activity_id',
-        'registration_id'
+        'registration_id',
     ];
 
     /* * * * * * * * VALIDATION * * * * * * * */
+    /** @return array<string, string|array> */
     public static function getRules(array $fields = [], $register = null): array
     {
         $rules = [
@@ -34,12 +37,14 @@ class ActivityRegistration extends Model
     /* * * * * * * * END - VALIDATION * * * * * * * */
 
     /* * * * * * * * RELATIONS * * * * * * * */
-    public function activities(): BelongsTo
+    /** @return BelongsTo<Activity, $this> */
+    public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class, 'activity_id');
     }
 
-    public function registrations(): BelongsTo
+    /** @return BelongsTo<Registration, $this> */
+    public function registration(): BelongsTo
     {
         return $this->belongsTo(Registration::class, 'registration_id');
     }

@@ -2,22 +2,32 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Database\Models\User;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
+use Symfony\Component\HttpFoundation\RedirectResponse as SymfonyRedirectResponse;
 
 class OidcController extends Controller
 {
     /**
      * Redirect the admin to the AD FS OIDC authorization endpoint.
+     *
+     * The `adfs` Socialite driver (sien/socialite-adfs) forces `prompt=login`
+     * by default, so AD FS always re-prompts for credentials instead of
+     * silently re-authenticating via its own SSO session cookie. Without
+     * this, a user who just logged out of the admin panel (local Laravel
+     * session correctly destroyed) would get immediately and silently
+     * signed back in the moment they revisit /admin, because AdminLogin::mount()
+     * auto-redirects unauthenticated visitors straight to AD FS, and AD FS
+     * would still recognise their still-active IdP session.
      */
-    public function redirect(): RedirectResponse
+    public function redirect(Request $request): SymfonyRedirectResponse
     {
         return Socialite::driver('adfs')->redirect();
     }
@@ -33,6 +43,15 @@ class OidcController extends Controller
      */
     public function callback(Request $request): RedirectResponse
     {
+        $this->recoverQueryParametersFromRequestUri($request);
+
+        if (! $request->filled('code') && ! $request->has('error')) {
+            Log::warning('AD FS OIDC callback missing authorization code');
+
+            return redirect()->route('filament.admin.auth.login')
+                ->withErrors(['adfs' => __('La connexion via le compte canton a échoué. Veuillez réessayer.')]);
+        }
+
         if ($request->has('error')) {
             Log::warning('AD FS OIDC error', [
                 'error' => $request->input('error'),
@@ -46,18 +65,16 @@ class OidcController extends Controller
         try {
             $socialiteUser = Socialite::driver('adfs')->user();
         } catch (\Throwable $e) {
-            // InvalidStateException carries no message, so log the class and the
-            // state values to distinguish a lost session from a token/userinfo failure.
             Log::error('AD FS OIDC callback error', [
                 'exception' => $e::class,
                 'message' => $e->getMessage(),
-                'request_state' => $request->input('state'),
-                'session_has_state' => $request->session()->has('state'),
             ]);
 
             return redirect()->route('filament.admin.auth.login')
                 ->withErrors(['adfs' => __('La connexion via le compte canton a échoué. Veuillez réessayer.')]);
         }
+
+        assert($socialiteUser instanceof SocialiteUser);
 
         if (! $this->isGroupAllowed($socialiteUser)) {
             Log::warning('AD FS login refused: user not in allowed group', [
@@ -91,7 +108,7 @@ class OidcController extends Controller
     {
         abort_unless(app()->environment('local'), 404);
 
-        $user = User::query()->where('role', UserRole::Admin)->first();
+        $user = User::query()->where('role', UserRole::ADMIN)->first();
 
         abort_if($user === null, 404, 'Aucun administrateur trouvé. Lancez le DemoSeeder pour en créer un.');
 
@@ -159,7 +176,42 @@ class OidcController extends Controller
             'email_verified_at' => now(),
             'adfs_id' => $socialiteUser->getId(),
             'password' => null,
-            'role' => UserRole::Admin,
+            'role' => UserRole::ADMIN,
         ]);
+    }
+
+    /**
+     * Recover query parameters from REQUEST_URI when upstream proxy drops QUERY_STRING.
+     */
+    private function recoverQueryParametersFromRequestUri(Request $request): void
+    {
+        if ($request->query->count() > 0) {
+            return;
+        }
+
+        if (filled((string) $request->server('QUERY_STRING'))) {
+            return;
+        }
+
+        $requestUri = (string) $request->server('REQUEST_URI');
+
+        if (! str_contains($requestUri, '?')) {
+            return;
+        }
+
+        $queryString = (string) parse_url($requestUri, PHP_URL_QUERY);
+
+        if ($queryString === '') {
+            return;
+        }
+
+        parse_str($queryString, $parameters);
+
+        if (empty($parameters)) {
+            return;
+        }
+
+        $request->query->add($parameters);
+
     }
 }

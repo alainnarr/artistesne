@@ -87,7 +87,7 @@ trait Trait_Seed
                 'uuid' => (string) Str::uuid(),
                 'email' => $email,
                 'name' => $attributes['name'] ?? 'Name',
-                'enum_role' => $attributes['enum_role'] ?? UserRole::Artist,
+                'enum_role' => $attributes['enum_role'] ?? UserRole::ARTIST,
                 'adfs_id' => $attributes['adfs_id'] ?? null,
                 'magic_link' => $attributes['magic_link'] ?? null,
             ], $attributes)
@@ -113,7 +113,7 @@ trait Trait_Seed
                 'biography' => 'Biography',
                 'city' => 'Neuchâtel',
                 'discipline_secondary' => $disciplineSecondary->id,
-                'enum_status' => ArtistStatus::Published->value,
+                'enum_status' => ArtistStatus::PUBLISHED->value,
                 'enum_show_contact' => ArtistShowContact::SHOW->value,
             ], $attributes)
         );

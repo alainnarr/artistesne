@@ -26,13 +26,13 @@
                     </p>
                 </div>
             @else
-                <form wire:submit="submit" class="flex flex-col gap-6">
+                <form wire:submit="submit" class="mx-auto flex w-full max-w-[500px] flex-col gap-6">
 
                     {{-- Votre email --}}
                     <section class="flex flex-col gap-4">
                         <h2 class="font-serif text-2xl font-bold text-brand">Votre email</h2>
                         <p class="text-base leading-relaxed text-brand">Indiquer l'adresse email de votre profil</p>
-                        <x-register.field
+                        <x-ds.field
                             wire:model.blur="email"
                             type="email"
                             label="Email"

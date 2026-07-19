@@ -31,7 +31,7 @@ class UsersServiceTest extends TestCase
             'id' => $user->id,
             'email' => 'artist@test.com',
             'name' => 'Artist Test',
-            'enum_role' => UserRole::Artist->value,
+            'enum_role' => UserRole::ARTIST->value,
         ]);
         $this->assertTrue(Str::isUuid($user->uuid));
     }
@@ -41,7 +41,7 @@ class UsersServiceTest extends TestCase
         $user = $this->service->create(
             email: 'admin@test.com',
             name: 'Administrator',
-            role: UserRole::Admin,
+            role: UserRole::ADMIN,
             adfsId: 'ADFS-123',
             magicLink: 'magic-token'
         );
@@ -50,7 +50,7 @@ class UsersServiceTest extends TestCase
             'id' => $user->id,
             'email' => 'admin@test.com',
             'name' => 'Administrator',
-            'enum_role' => UserRole::Admin->value,
+            'enum_role' => UserRole::ADMIN->value,
             'adfs_id' => 'ADFS-123',
             'magic_link' => 'magic-token',
         ]);

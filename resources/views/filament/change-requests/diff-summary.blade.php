@@ -1,8 +1,8 @@
 @php
     $labels = [
-        'name' => "Nom d'artiste",
-        'discipline' => 'Domaine principal',
-        'secondary_discipline' => 'Domaine secondaire',
+        'artist_name' => "Nom d'artiste",
+        'discipline_main_id' => 'Domaine principal',
+        'discipline_secondary' => 'Domaine secondaire',
         'city' => 'Ville / Commune',
         'biography' => 'Biographie',
         'links' => 'Liens',
@@ -12,8 +12,16 @@
         'collaborations' => 'Collaborations',
         'email' => 'E-mail',
         'phone' => 'Téléphone',
-        'display_contact_button' => 'Afficher le bouton de contact',
+        'enum_show_contact' => 'Afficher le bouton de contact',
     ];
+
+    $disciplineLabel = function ($value): ?string {
+        if (blank($value)) {
+            return null;
+        }
+
+        return \App\Database\Models\Discipline::find($value)?->label ?? (string) $value;
+    };
 
     $normalizeLinks = function ($links): array {
         if (! is_array($links)) {
@@ -212,10 +220,12 @@
                         </ul>
                     @endif
 
-                @elseif ($field === 'display_contact_button')
+                @elseif ($field === 'enum_show_contact')
                     @php
-                        $oldStr = $oldValue ? 'Oui' : 'Non';
-                        $newStr = $newValue ? 'Oui' : 'Non';
+                        $oldBool = $oldValue instanceof \App\Enums\ArtistShowContact ? $oldValue->toBool() : (bool) $oldValue;
+                        $newBool = $newValue instanceof \App\Enums\ArtistShowContact ? $newValue->toBool() : (bool) $newValue;
+                        $oldStr = $oldBool ? 'Oui' : 'Non';
+                        $newStr = $newBool ? 'Oui' : 'Non';
                     @endphp
                     <div class="crf-cols">
                         <div class="crf-col crf-col-old">
@@ -227,6 +237,26 @@
                             <span>{{ $newStr }}</span>
                         </div>
                     </div>
+
+                @elseif (in_array($field, ['discipline_main_id', 'discipline_secondary'], true))
+                    @php
+                        $oldStr = $disciplineLabel($oldValue) ?? '—';
+                        $newStr = $disciplineLabel($newValue) ?? '—';
+                    @endphp
+                    @if ($oldStr === $newStr)
+                        <p class="crf-empty">Aucun changement.</p>
+                    @else
+                        <div class="crf-cols">
+                            <div class="crf-col crf-col-old">
+                                <p class="crf-col-head">Actuel</p>
+                                <span>{{ $oldStr }}</span>
+                            </div>
+                            <div class="crf-col crf-col-new">
+                                <p class="crf-col-head">Proposé</p>
+                                <span>{{ $newStr }}</span>
+                            </div>
+                        </div>
+                    @endif
 
                 @else
                     @php

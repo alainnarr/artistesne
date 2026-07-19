@@ -7,27 +7,27 @@ use PHPUnit\Framework\TestCase;
 
 class ArtistShowContactTest extends TestCase
 {
-    public function testLabelReturnsHide(): void
+    public function test_label_returns_hide(): void
     {
         $this->assertEquals('Hide', ArtistShowContact::HIDE->label());
     }
 
-    public function testLabelReturnsShow(): void
+    public function test_label_returns_show(): void
     {
         $this->assertEquals('Show', ArtistShowContact::SHOW->label());
     }
 
-    public function testToBoolReturnsFalseForHide(): void
+    public function test_to_bool_returns_false_for_hide(): void
     {
         $this->assertFalse(ArtistShowContact::HIDE->toBool());
     }
 
-    public function testToBoolReturnsTrueForShow(): void
+    public function test_to_bool_returns_true_for_show(): void
     {
         $this->assertTrue(ArtistShowContact::SHOW->toBool());
     }
 
-    public function testFromBoolReturnsHide(): void
+    public function test_from_bool_returns_hide(): void
     {
         $this->assertEquals(
             ArtistShowContact::HIDE,
@@ -35,7 +35,7 @@ class ArtistShowContactTest extends TestCase
         );
     }
 
-    public function testFromBoolReturnsShow(): void
+    public function test_from_bool_returns_show(): void
     {
         $this->assertEquals(
             ArtistShowContact::SHOW,

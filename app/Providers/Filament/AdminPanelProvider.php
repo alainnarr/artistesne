@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\AdminLogin;
 use App\Filament\Widgets\InventoryStatsOverview;
+use App\Http\Middleware\AdminIpWhitelist;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -29,6 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login(AdminLogin::class)
+            ->databaseNotifications()
             ->colors([
                 'primary' => Color::Emerald,
             ])
@@ -43,6 +45,7 @@ class AdminPanelProvider extends PanelProvider
                 InventoryStatsOverview::class,
             ])
             ->middleware([
+                AdminIpWhitelist::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,

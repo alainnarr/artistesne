@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Public;
 
+use App\Database\Models\User;
 use App\Enums\UserRole;
-use App\Models\User;
 use App\Notifications\ContactMessageNotification;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Notification;
@@ -60,7 +60,7 @@ class Contact extends Component
     {
         $data = $this->validate();
 
-        $admins = User::where('role', UserRole::Admin)->get();
+        $admins = User::where('role', UserRole::ADMIN)->get();
 
         Notification::send($admins, new ContactMessageNotification(
             lastName: $data['last_name'],

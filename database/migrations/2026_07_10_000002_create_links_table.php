@@ -12,8 +12,7 @@ return new class extends Migration {
     private function _columns(&$table)
     {
         $table->bigIncrements('id');
-        // $table->foreignKey('artist_id', 'artists', 'id', 'bigInteger')->nullable();
-        $table->unsignedBigInteger('artist_id')->nullable();
+        $table->foreignKey('artist_id', 'artists', 'id', 'bigInteger')->nullable();
         $table->foreignKey('registration_id', 'registrations', 'id', 'bigInteger')->nullable();
         $table->string('link', 255);
         $table->enumeration('enum_type', 'string');

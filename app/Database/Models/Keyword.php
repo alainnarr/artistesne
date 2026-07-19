@@ -1,22 +1,33 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Database\Models;
 
 use App\Database\Model;
+use Database\Factories\KeywordFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Keyword extends Model
 {
+    use HasFactory;
+
     protected $table = 'keywords';
 
     protected $fillable = [
         'label',
     ];
 
-    protected $updatable = [];
+    /** @return KeywordFactory<Keyword, $this> */
+    protected static function newFactory(): KeywordFactory
+    {
+        return KeywordFactory::new();
+    }
 
     /* * * * * * * * VALIDATION * * * * * * * */
+    /** @return array<string, string|array> */
     public static function getRules(array $fields = [], $register = null): array
     {
         $rules = [
@@ -32,11 +43,13 @@ class Keyword extends Model
     /* * * * * * * * END - VALIDATION * * * * * * * */
 
     /* * * * * * * * RELATIONS * * * * * * * */
+    /** @return BelongsToMany<Artist, $this> */
     public function artists(): BelongsToMany
     {
         return $this->belongsToMany(Artist::class, 'keywords_artists', 'keyword_id', 'artist_id');
     }
 
+    /** @return HasMany<KeywordArtist, $this> */
     public function keywordsArtists(): HasMany
     {
         return $this->hasMany(KeywordArtist::class, 'keyword_id');

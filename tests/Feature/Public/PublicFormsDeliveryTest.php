@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Database\Models\User;
 use App\Livewire\Public\Contact;
 use App\Livewire\Public\RequestModification;
-use App\Models\User;
 use App\Notifications\ContactMessageNotification;
 use App\Notifications\ModificationRequestNotification;
 use Illuminate\Support\Facades\Notification;
